@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="color-scheme" content="dark light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Akbar Finance">
+<meta name="format-detection" content="telephone=no">
+<meta name="robots" content="noindex, nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'">
+<title>Akbar Finance 3.0</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+<div id="app"><div class="boot-splash">Akbar Finance</div></div>
+<nav id="tabbar" class="tabbar"></nav>
+<button id="fab" class="fab hidden" data-a="modal" data-m="record" aria-label="Добавить запись"></button>
+<div id="sheet" class="hidden"></div>
+<div id="toast" class="toast hidden" role="status"></div>
+<script src="src/core.js"></script>
+<script src="src/icons.js"></script>
+<script src="src/charts.js"></script>
+<script src="src/db.js"></script>
+<script src="src/app.js"></script>
+<script src="src/screens-home.js"></script>
+<script src="src/modals-record.js"></script>
+<script src="src/modals-more.js"></script>
+<script src="src/modals-extra.js"></script>
+<script src="src/screens-planning.js"></script>
+<script src="src/screens-stats.js"></script>
+<script src="src/screens-more.js"></script>
+<script>document.getElementById('fab').innerHTML = AFIcons.icon('plus'); App.boot();</script>
+</body>
+</html>
