@@ -414,3 +414,13 @@ a.row{color:var(--text);text-decoration:none}
 .mb8{margin-bottom:8px}
 .row.ser-row .t2{white-space:normal;overflow:visible;text-overflow:clip}
 .row.blk .chip{min-width:92px;justify-content:center;text-align:center}
+
+/* 3.4 simulator table + horizon fields */
+.sim-table-wrap{overflow:hidden}
+.table-scroll{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.sim-table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+.sim-table th,.sim-table td{padding:8px 6px;border-bottom:1px solid var(--sep);white-space:nowrap;text-align:left}
+.sim-table thead th{color:var(--text2,#8e8e93);font-weight:600;font-size:11px}
+.sim-table td.num,.sim-table th.num{text-align:right}
+.sim-table tr.tot td{font-weight:700;border-bottom:0;padding-top:10px}
+.mt12{margin-top:12px}

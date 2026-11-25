@@ -27,7 +27,7 @@
       row('download', '#0A84FF', T('Данные, импорт и резервные копии', 'Data, import & backups'), T('JSON, CSV, снимки', 'JSON, CSV, snapshots'), go('data')) +
       row('edit', '#8E8E93', T('Журнал изменений', 'Change log'), (L.changelog || []).length + T(' записей', ' entries'), go('changelog')) +
       row('settings', '#8E8E93', T('Настройки', 'Settings'), (App.lang() === 'en' ? 'English' : 'Русский') + ' · ' + T({ dark: 'тёмная', light: 'светлая', auto: 'авто' }[L.settings.theme] || 'тёмная', L.settings.theme), go('settings')) +
-      row('info', '#8E8E93', T('О приложении и ограничения', 'About & limitations'), 'Akbar Finance 3.0 · v3.3', go('about')) + '</div>';
+      row('info', '#8E8E93', T('О приложении и ограничения', 'About & limitations'), 'Akbar Finance 3.0 · v3.4', go('about')) + '</div>';
     return { title: T('Ещё', 'More'), html: h };
   };
 
@@ -61,39 +61,83 @@
   document.addEventListener('change', function (e) { var el = e.target; if (el.dataset && el.dataset.live === 'pc' && (el.tagName === 'SELECT' || el.type === 'checkbox')) App.live.pc(el); });
 
   /* ---------- simulator ---------- */
-  function SIMF() { return [['income', T('Доход в месяц', 'Monthly income')], ['parents', T('Родителям', 'Parents')], ['loans', T('Кредиты', 'Loans')], ['expenses', T('Личные расходы', 'Personal spending')], ['savings', T('Сбережения', 'Savings')], ['other', T('Другие платежи', 'Other payments')]]; }
+  function SIMF() { return [['income', T('Доход', 'Income')], ['parents', T('Родителям', 'Parents')], ['loans', T('Кредиты', 'Loans')], ['expenses', T('Личные расходы', 'Personal spending')], ['savings', T('Сбережения', 'Savings')], ['other', T('Другие платежи', 'Other payments')]]; }
   function simOpts() { return { today: S.today, scenarios: App.scen ? App.scen() : [] }; }
-  function simRefreshPlan() {
-    var u = S.ui.sim, startYm = C.simStartYm(S.L, S.today), p = C.planParts(C.monthPlan(S.L, startYm, simOpts())), ov = u.overrides || {};
-    u.startYm = startYm;
-    if (!ov.income) u.income = App.amtStr(p.income);
-    if (!ov.parents) u.parents = App.amtStr(p.parents);
-    if (!ov.loans) u.loans = App.amtStr(p.loans);
-    if (!ov.expenses) u.expenses = App.amtStr(p.expenses);
-    if (!ov.savings) u.savings = App.amtStr(0);
-    if (!ov.other) u.other = App.amtStr(p.other);
-  }
-  function simInit(id) {
+  function simInit(id, keepHorizon) {
     var s = C.byId(S.L.scenarios, id) || S.L.scenarios[1] || S.L.scenarios[0];
-    S.ui.sim = { id: s.id, months: String(s.months != null ? C.clampHorizon(s.months) : C.HORIZON_DEFAULT), overrides: Object.assign({}, s.overrides || {}), lines: (s.lines || []).map(function (l) { return Object.assign({}, l); }) };
-    ['income', 'parents', 'loans', 'expenses', 'savings', 'other'].forEach(function (k) { S.ui.sim[k] = App.amtStr(s[k] || 0); });
-    simRefreshPlan();
+    var months = keepHorizon && S.ui.sim && S.ui.sim.months != null ? S.ui.sim.months : (s.months != null ? C.clampHorizon(s.months) : C.HORIZON_DEFAULT);
+    var mode = (S.ui.sim && S.ui.sim.mode) || 'total';
+    S.ui.sim = { id: s.id, months: String(months), mode: mode, overrides: Object.assign({}, s.overrides || {}), lines: (s.lines || []).map(function (l) { return Object.assign({}, l); }), params: C.normalizeSimParams(s.id, s.params), startYm: C.simStartYm(S.L, S.today) };
+    ['income', 'parents', 'loans', 'expenses', 'savings', 'other'].forEach(function (k) { S.ui.sim[k] = ''; });
   }
   function simObj() {
-    var u = S.ui.sim, o = { months: C.clampHorizon(u.months), lines: u.lines || [], overrides: u.overrides || {}, usePlan: true, startYm: u.startYm || C.simStartYm(S.L, S.today) };
+    var u = S.ui.sim, o = { id: u.id, months: C.clampHorizon(u.months), lines: u.lines || [], overrides: u.overrides || {}, usePlan: true, startYm: u.startYm || C.simStartYm(S.L, S.today), params: C.normalizeSimParams(u.id, u.params) };
     ['income', 'parents', 'loans', 'expenses', 'savings', 'other'].forEach(function (k) { o[k] = App.toMinor(u[k] || '0') || 0; });
     return o;
+  }
+  function simRun() { return C.scenarioCalc(simObj(), S.L, S.today, simOpts()); }
+  function simFieldVal(r, key) {
+    var u = S.ui.sim, n = r.months || 1, sum = (r.sums && r.sums[key]) || 0;
+    return u.mode === 'avg' ? Math.round(sum / n) : sum;
+  }
+  function simPresetBlurb(id, params) {
+    params = C.normalizeSimParams(id, params);
+    var hasLow = C.hasSalaryBand(S.L, 'low'), hasHigh = C.hasSalaryBand(S.L, 'high');
+    if (id === 'neg') {
+      var sal = hasLow ? T('зарплата по нижней оценке из плана доходов', 'salary at the plan’s pessimistic estimate') : (T('зарплата ', 'salary ') + (params.salaryPct || 0) + '%');
+      return T('Пессимистичный: ', 'Pessimistic: ') + sal + T(', личные расходы ', ', personal spending ') + (params.expensesPct > 0 ? '+' : '') + params.expensesPct + '%.';
+    }
+    if (id === 'opt') {
+      var bits = [];
+      if (params.incomePct) bits.push(T('доход ', 'income ') + (params.incomePct > 0 ? '+' : '') + params.incomePct + '%');
+      if (hasHigh && params.salaryBand === 'high') bits.push(T('зарплата по верхней оценке плана', 'salary at the plan’s optimistic estimate'));
+      if (params.bonus) bits.push(T('бонус ', 'bonus ') + F(params.bonus) + T('/мес.', '/mo'));
+      return T('Оптимистичный: ', 'Optimistic: ') + (bits.join(T(', ', ', ')) || T('без дополнительных допущений', 'no extra assumptions')) + '.';
+    }
+    return T('Базовый: как в бюджетных периодах, без изменений. Цифры совпадают с «Бюджетными периодами» и «Плановыми платежами».', 'Base: the live plan, unchanged. Figures match Budget periods and Planned payments.');
+  }
+  function simParamsForm() {
+    var u = S.ui.sim, p = C.normalizeSimParams(u.id, u.params), h = '', band;
+    if (u.id === 'neg') {
+      var hasLow = C.hasSalaryBand(S.L, 'low');
+      band = p.salaryBand === 'low' && hasLow ? 'low' : (p.salaryBand === 'exp' ? 'exp' : 'pct');
+      h += App.fld(T('Зарплата', 'Salary'), '<select class="in" data-ch="simBandChange">' + App.opts([['low', T('Нижняя оценка из плана', 'Plan pessimistic estimate')], ['exp', T('Как в плане (база)', 'As in the plan (base)')], ['pct', T('Процент от плана', '% of the plan')]], band) + '</select>');
+      if (band === 'pct') h += App.fld(T('Изменение зарплаты, %', 'Salary change, %'), '<input class="in" inputmode="decimal" data-live="simP" data-k="salaryPct" value="' + esc(p.salaryPct) + '">');
+      if (p.salaryBand === 'low' && !hasLow) h += '<div class="note">' + T('В плане доходов нет нижней оценки — используется процент.', 'The income plan has no pessimistic estimate — a percentage is used.') + '</div>';
+      h += App.fld(T('Личные расходы, %', 'Personal spending, %'), '<input class="in" inputmode="decimal" data-live="simP" data-k="expensesPct" value="' + esc(p.expensesPct) + '">');
+    }
+    if (u.id === 'opt') {
+      h += App.fld(T('Доход, %', 'Income, %'), '<input class="in" inputmode="decimal" data-live="simP" data-k="incomePct" value="' + esc(p.incomePct) + '">');
+      h += App.fld(T('Бонус в месяц, AED', 'Monthly bonus, AED'), '<input class="in" inputmode="decimal" data-live="simP" data-k="bonus" value="' + esc(App.amtStr(p.bonus || 0)) + '">');
+    }
+    return h ? '<div class="form">' + App.group(T('Допущения сценария', 'Scenario assumptions'), h) + '</div>' : '';
+  }
+  function simTable(r) {
+    var rows = r.rows || [];
+    if (!rows.length) return '';
+    var th = [T('Месяц', 'Month'), T('Доход', 'Income'), T('Родителям', 'Parents'), T('Кредиты', 'Credits'), T('Личные', 'Personal'), T('Остаток', 'Result'), T('Накопительно', 'Cumulative')];
+    var cell = function (c, i, tag) { tag = tag || (i ? 'td' : 'th'); return '<' + tag + (i ? ' class="num"' : '') + '>' + c + '</' + tag + '>'; };
+    var tr = function (cells, cls, head) { return '<tr' + (cls ? ' class="' + cls + '"' : '') + '>' + cells.map(function (c, i) { return cell(c, i, head || (i ? 'td' : 'th')); }).join('') + '</tr>'; };
+    var body = rows.map(function (x) {
+      var inc = x.income + x.borrow + (x.extraIn || 0);
+      var resCls = x.result < 0 ? 'neg' : 'pos';
+      return tr([esc(App.fymTiny(x.ym)), esc(F(inc)), esc(F(x.parents)), esc(F(x.loans)), esc(F(x.expenses)), '<span class="' + resCls + '">' + esc(App.FS(x.result)) + '</span>', esc(App.FS(x.cumulative))], '', 'td');
+    }).join('');
+    var tot = tr([T('Итого', 'Total'), esc(F(r.sums.income + r.sums.borrow + r.sums.extraIn)), esc(F(r.sums.parents)), esc(F(r.sums.loans)), esc(F(r.sums.expenses)), '<span class="' + (r.total < 0 ? 'neg' : 'pos') + '">' + esc(App.FS(r.total)) + '</span>', esc(App.FS(r.total))], 'tot', 'td');
+    return '<div class="card mt12 sim-table-wrap"><div class="card-h"><span class="t">' + T('По месяцам', 'By month') + '</span></div><div class="table-scroll"><table class="sim-table"><thead>' + tr(th.map(esc), 'hd', 'th') + '</thead><tbody>' + body + tot + '</tbody></table></div></div>';
   }
   function simOut() {
     var o = simObj(), r = C.scenarioCalc(o, S.L, S.today, simOpts()), first = r.rows[0], last = r.rows[r.rows.length - 1];
     var fmt0 = function (v) { return F(v, 'AED', { dec: 0 }); };
-    var kpis = kpi(T('Остаток ', 'Result ') + (first ? App.fymShort(first.ym) : ''), App.FS(r.monthly), r.monthly < 0 ? 'neg' : 'pos', T('как в бюджетных периодах', 'matches budget periods')) +
+    var kpis = kpi(T('Остаток ', 'Result ') + (first ? App.fymShort(first.ym) : ''), App.FS(r.monthly), r.monthly < 0 ? 'neg' : 'pos', T('первый месяц горизонта', 'first month of the horizon')) +
       kpi(T('За ', 'Over ') + r.months + T(' мес.', ' mo'), App.FS(r.total), r.total < 0 ? 'neg' : 'pos', first && last ? App.fymTiny(first.ym) + ' – ' + App.fymTiny(last.ym) : '');
+    if (r.delta) kpis += kpi(T('К базе', 'Vs base'), App.FS(r.delta), r.delta < 0 ? 'neg' : 'pos', T('разница за горизонт', 'difference over the horizon'));
+    var chartId = 'simBars-' + (o.id || 'base') + '-' + r.months + '-' + (r.total || 0);
     var groups = r.rows.map(function (x) {
       return { label: App.fymTiny(x.ym), valueLabel: fmt0(x.result), tip: App.fym(x.ym) + (x.extraIn || x.extraOut ? ' · ' + T('сценарий ', 'scenario ') + F(x.extraIn - x.extraOut) : ''),
         values: [{ v: x.result, color: x.result < 0 ? 'var(--expense)' : 'var(--income)', name: T('Остаток месяца', 'Month result') }, { v: x.cumulative, color: 'var(--savings)', name: T('Накопительно', 'Cumulative') }] };
     });
-    return '<div class="kpis">' + kpis + '</div><div class="card mt12 chart-card">' + CH.bars({ id: 'simBars', height: 160, valueLabels: true, minGroup: 48, groups: groups, fmtTip: function (v) { return F(v); }, legend: [{ name: T('Остаток месяца', 'Month result'), color: 'var(--income)' }, { name: T('Накопительно', 'Cumulative'), color: 'var(--savings)' }] }) + '</div>';
+    return '<div class="kpis">' + kpis + '</div><div class="card mt12 chart-card" data-sim-chart="' + esc(chartId) + '">' + CH.bars({ id: chartId, height: 160, valueLabels: true, minGroup: 48, groups: groups, fmtTip: function (v) { return F(v); }, legend: [{ name: T('Остаток месяца', 'Month result'), color: 'var(--income)' }, { name: T('Накопительно', 'Cumulative'), color: 'var(--savings)' }] }) + '</div>' + simTable(r);
   }
   function simLineSub(ln) {
     if (ln.repeat === 'monthly') { var n = Math.max(1, parseInt(ln.count, 10) || 1); return App.fymTiny(ln.start) + ' – ' + App.fymTiny(C.addMonths(ln.start, n - 1)) + ' · ' + n + T(' мес.', ' mo'); }
@@ -105,63 +149,106 @@
     var h = '<div class="sec-h"><span class="t">' + T('Доп. доходы (сценарий)', 'Extra income (scenario)') + '</span><button type="button" class="more" data-a="simLineNew" data-kind="income">' + I('plus', 'sm') + T('Добавить', 'Add') + '</button></div>';
     h += inc.length ? '<div class="list">' + inc.map(row).join('') + '</div>' : '<div class="card empty">' + T('Нет дополнительных доходов. Эти строки не записываются в плановые платежи — только расчёт сценария.', 'No extra income lines. They are not written to planned payments — scenario only.') + '</div>';
     h += '<div class="sec-h"><span class="t">' + T('Доп. расходы (сценарий)', 'Extra expenses (scenario)') + '</span><button type="button" class="more" data-a="simLineNew" data-kind="expense">' + I('plus', 'sm') + T('Добавить', 'Add') + '</button></div>';
-    h += exp.length ? '<div class="list">' + exp.map(row).join('') + '</div>' : '<div class="card empty">' + T('Нет дополнительных расходов', 'No extra expense lines') + '</div>';
+    h += exp.length ? '<div class="list">' + exp.map(row).join('') + '</div>' : '<div class="card empty">' + T('Нет дополнительных расходов.', 'No extra expense lines.') + '</div>';
     return h;
   }
   App.screens.simulator = function () {
-    if (!S.ui.sim) simInit('base'); else simRefreshPlan();
-    var u = S.ui.sim, h = '<div class="seg">' + S.L.scenarios.map(function (s) { return '<button class="' + (u.id === s.id ? 'on' : '') + '" data-a="simPreset" data-id="' + s.id + '">' + esc(s.name[App.lang()] || s.name.ru) + '</button>'; }).join('') + '</div>';
-    h += '<div class="note mt8">' + T('Базовый расчёт совпадает с бюджетными периодами: доходы, кредиты и переводы родителям берутся из плановых платежей. Доход конца месяца финансирует следующий месяц. Доп. строки — только сценарий, в план не записываются.', 'The base result matches budget periods: income, loan payments and parent transfers come from planned payments. End-of-month income funds the next month. Extra lines are a scenario only and are not written to the plan.') + '</div>';
-    h += '<div class="form mt12"><div class="group">';
+    if (!S.ui.sim) simInit('base');
+    S.ui.sim.startYm = C.simStartYm(S.L, S.today);
+    S.ui.sim.params = C.normalizeSimParams(S.ui.sim.id, S.ui.sim.params);
+    var u = S.ui.sim, r = simRun(), n = r.months, mode = u.mode === 'avg' ? 'avg' : 'total';
+    var h = '<div class="seg">' + S.L.scenarios.map(function (s) { return '<button class="' + (u.id === s.id ? 'on' : '') + '" data-a="simPreset" data-id="' + s.id + '">' + esc(s.name[App.lang()] || s.name.ru) + '</button>'; }).join('') + '</div>';
+    h += '<div class="note mt8" id="simBlurb">' + esc(simPresetBlurb(u.id, u.params)) + (r.delta ? ' ' + T('За ', 'Over ') + n + T(' мес. к базовому: ', ' mo vs base: ') + App.FS(r.delta) + '.' : ' ' + T('За ', 'Over ') + n + T(' мес. совпадает с планом.', ' mo matches the plan.')) + '</div>';
+    h += simParamsForm();
+    h += '<div class="seg mt12" id="simModeSeg">' + [['total', T('Итого за ', 'Total for ') + n + T(' мес.', ' mo')], ['avg', T('В среднем за месяц', 'Monthly average')]].map(function (x) { return '<button class="' + (mode === x[0] ? 'on' : '') + '" data-a="simMode" data-v="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>';
+    h += '<div class="form mt8">';
     SIMF().forEach(function (x) {
       var locked = !(u.overrides && u.overrides[x[0]]);
-      h += App.fld(x[1] + ', AED <span class="tiny muted">' + (locked ? T('из плана', 'from plan') : T('сценарий', 'scenario')) + '</span>', '<input class="in" inputmode="decimal" data-live="sim" data-k="' + x[0] + '" value="' + esc(u[x[0]]) + '">');
+      var monthly = locked ? null : (App.toMinor(u[x[0]]) || 0);
+      var val = locked ? simFieldVal(r, x[0]) : (mode === 'avg' ? monthly : monthly * n);
+      var cap = locked ? T('из плана', 'from plan') : T('изменено', 'edited');
+      h += App.fld(x[1] + ' <span class="tiny muted">' + cap + '</span>', '<input class="in" inputmode="decimal" data-live="sim" data-k="' + x[0] + '" value="' + esc(App.amtStr(val)) + '">');
     });
     h += App.fld(T('Месяцев', 'Months'), '<div class="stepper"><button type="button" data-a="simMonths" data-d="-1" aria-label="−">−</button><input class="in" id="simMonths" type="number" min="1" max="36" inputmode="numeric" pattern="[0-9]*" data-live="sim" data-k="months" value="' + esc(u.months) + '"><button type="button" data-a="simMonths" data-d="1" aria-label="+">+</button></div>');
-    h += '</div></div>';
+    h += '</div>';
+    h += '<div class="note">' + T('Если изменить поле, сумма применяется к каждому месяцу горизонта (займы из плана сохраняются в доходе).', 'If you edit a field, that amount is applied to every month of the horizon (plan borrowings stay in income).') + '</div>';
     h += '<div id="simOut" class="mt12">' + simOut() + '</div>';
     h += simLinesBlock();
     h += '<div class="btns"><button class="btn sec" data-a="simSave">' + T('Сохранить сценарий', 'Save scenario') + '</button><button class="btn" data-a="simApply">' + T('Применить бюджет к плану', 'Apply budget to plan') + '</button></div>';
     h += '<div class="note">' + T('Симулятор не меняет фактические операции. «Применить» меняет только общий личный бюджет месяца (после подтверждения).', 'The simulator never changes actual records. "Apply" only changes the monthly personal budget (after confirmation).') + '</div>';
     return { title: T('Симулятор', 'Simulator'), html: h };
   };
+  function simPaint() {
+    var o = document.getElementById('simOut'), b = document.getElementById('simBlurb'), u = S.ui.sim;
+    if (o) o.innerHTML = simOut();
+    if (b && u) {
+      var r = simRun(), n = r.months;
+      b.textContent = simPresetBlurb(u.id, u.params) + (r.delta ? ' ' + T('За ', 'Over ') + n + T(' мес. к базовому: ', ' mo vs base: ') + App.FS(r.delta) + '.' : ' ' + T('За ', 'Over ') + n + T(' мес. совпадает с планом.', ' mo matches the plan.'));
+    }
+  }
   App.live.sim = function (el) {
     var u = S.ui.sim; if (!u) return;
-    var k = el.dataset.k; u[k] = el.value;
-    if (k === 'months') u.months = String(C.clampHorizon(el.value));
-    else { u.overrides = u.overrides || {}; u.overrides[k] = true; }
-    var o = document.getElementById('simOut'); if (o) o.innerHTML = simOut();
+    var k = el.dataset.k, r, n, monthly, cap;
+    if (k === 'months') {
+      var raw = parseInt(el.value, 10);
+      if (isFinite(raw) && raw >= 1) { u.months = String(C.clampHorizon(raw)); simPaint(); }
+      return;
+    }
+    r = simRun(); n = r.months || 1;
+    monthly = App.toMinor(el.value);
+    if (monthly == null || monthly < 0) return;
+    if (u.mode !== 'avg') monthly = Math.round(monthly / n);
+    u[k] = App.amtStr(monthly);
+    u.overrides = u.overrides || {}; u.overrides[k] = true;
+    cap = el.closest && el.closest('.fld') && el.closest('.fld').querySelector('.tiny.muted');
+    if (cap) cap.textContent = T('изменено', 'edited');
+    simPaint();
+  };
+  App.live.simP = function (el) {
+    var u = S.ui.sim, k = el.dataset.k; if (!u) return;
+    u.params = u.params || C.normalizeSimParams(u.id);
+    if (k === 'bonus') u.params.bonus = App.toMinor(el.value) || 0;
+    else u.params[k] = parseFloat(String(el.value).replace(',', '.')) || 0;
+    simPaint();
   };
   App.actions.simMonths = function (el) { var u = S.ui.sim, n = C.clampHorizon((parseInt(u.months, 10) || C.HORIZON_DEFAULT) + (+el.dataset.d)); u.months = String(n); App.render(); };
-  App.actions.simPreset = function (el) { simInit(el.dataset.id); App.render(); };
-  App.actions.simSave = function () { var u = S.ui.sim, o = simObj(); App.commit(T('Сценарий сохранён', 'Scenario saved'), function (L) { var s = C.byId(L.scenarios, u.id); Object.assign(s, { months: o.months, lines: o.lines, overrides: o.overrides, usePlan: true, income: o.income, parents: o.parents, loans: o.loans, expenses: o.expenses, savings: o.savings, other: o.other }); }); };
-  App.actions.simApply = function () { var o = simObj(); App.confirm(T('Применить к плану?', 'Apply to plan?'), T('Общий личный бюджет месяца станет ', 'The monthly personal budget becomes ') + F(o.expenses) + T('. Фактические операции не изменятся.', '. Actual records stay unchanged.'), function () { App.commit(T('Личный бюджет обновлён', 'Personal budget updated'), function (L) { L.budgetPlan.total = o.expenses; }); }); };
+  App.actions.simPreset = function (el) { simInit(el.dataset.id, true); App.render(); };
+  App.actions.simMode = function (el) { S.ui.sim.mode = el.dataset.v; App.render(); };
+  App.actions.simBandChange = function (el) {
+    var u = S.ui.sim, v = el.value;
+    u.params = u.params || C.normalizeSimParams(u.id);
+    u.params.salaryBand = v;
+    App.render();
+  };
+  App.actions.simSave = function () { var u = S.ui.sim, o = simObj(); App.commit(T('Сценарий сохранён', 'Scenario saved'), function (L) { var s = C.byId(L.scenarios, u.id); Object.assign(s, { months: o.months, lines: o.lines, overrides: o.overrides, usePlan: true, params: o.params, income: o.income, parents: o.parents, loans: o.loans, expenses: o.expenses, savings: o.savings, other: o.other }); }); };
+  App.actions.simApply = function () {
+    var r = simRun(), monthly = r.avgs ? r.avgs.expenses : (simObj().expenses);
+    if (S.ui.sim.overrides && S.ui.sim.overrides.expenses) monthly = App.toMinor(S.ui.sim.expenses) || 0;
+    App.confirm(T('Применить к плану?', 'Apply to plan?'), T('Общий личный бюджет месяца станет ', 'The monthly personal budget becomes ') + F(monthly) + T('. Фактические операции не изменятся.', '. Actual records stay unchanged.'), function () { App.commit(T('Личный бюджет обновлён', 'Personal budget updated'), function (L) { L.budgetPlan.total = monthly; }); });
+  };
   App.actions.simLineNew = function (el) { App.openModal('simLine', { kind: el.dataset.kind }); };
   App.actions.simLineEdit = function (el) { App.openModal('simLine', { id: el.dataset.id }); };
   App.modals.simLine = function (m) {
     var u = S.ui.sim, f = m.f, cur = m.id ? (u.lines || []).filter(function (l) { return l.id === m.id; })[0] : null;
+    var fld = App.fld, inp = App.inp, sel = App.sel;
     if (!m.inited) {
       m.inited = true;
-      if (cur) Object.assign(f, { title: cur.title, amount: App.amtStr(cur.amount), start: cur.start, repeat: cur.repeat || 'once', count: String(cur.count || 1), kind: cur.kind });
+      if (cur) Object.assign(f, { title: cur.title, amount: App.amtStr(cur.amount), start: cur.start, repeat: cur.repeat || 'once', count: String(cur.count || 1), kind: cur.kind || 'income' });
       else Object.assign(f, { title: '', amount: '', start: (u && u.startYm) || C.simStartYm(S.L, S.today), repeat: 'once', count: '1', kind: m.kind || 'income' });
     }
-    var months = [], ym0 = C.addMonths(C.ymOf(S.today), -3);
-    for (var i = 0; i < 40; i++) { var ym = C.addMonths(ym0, i); months.push([ym, App.fym(ym)]); }
-    var h = '<div class="form"><div class="group">';
-    h += App.fld(T('Тип', 'Type'), App.sel('kind', App.opts([['income', T('Доход', 'Income')], ['expense', T('Расход', 'Expense')]], f.kind), { re: 1 }));
-    h += App.fld(T('Название', 'Name'), App.inp('title', f.title, { ph: T('Например, доп. проект', 'e.g. side project') }));
-    h += App.fld(T('Сумма, AED', 'Amount, AED'), App.inp('amount', f.amount, { num: true }));
-    h += App.fld(T('С месяца', 'From month'), App.sel('start', App.opts(months, f.start)));
-    h += App.fld(T('Как часто', 'Frequency'), App.sel('repeat', App.opts([['once', T('Разово', 'One-off')], ['monthly', T('Ежемесячно', 'Monthly')]], f.repeat), { re: 1 }));
-    if (f.repeat === 'monthly') h += App.fld(T('Длительность, мес.', 'Duration, months'), App.inp('count', f.count, { num: true }));
-    h += '</div><div class="note">' + T('Строка влияет только на этот сценарий симулятора. Плановые платежи и бюджетные периоды не изменятся.', 'This line affects only this simulator scenario. Planned payments and budget periods stay unchanged.') + '</div></div>';
+    var h = '<div class="form">' + fld(T('Название', 'Title'), inp('title', f.title)) + fld(T('Сумма, AED', 'Amount, AED'), inp('amount', f.amount, { num: true })) +
+      fld(T('С месяца', 'From month'), inp('start', f.start, { type: 'month' })) +
+      fld(T('Повтор', 'Repeat'), sel('repeat', App.opts([['once', T('Разово', 'One-off')], ['monthly', T('Ежемесячно', 'Monthly')]], f.repeat), { re: 1 }));
+    if (f.repeat === 'monthly') h += fld(T('Сколько месяцев', 'How many months'), inp('count', f.count, { num: true }));
+    h += '</div><div class="note">' + T('Строка влияет только на этот сценарий симулятора. Плановые платежи и бюджетные периоды не изменятся.', 'This line affects only this simulator scenario. Planned payments and budget periods stay unchanged.') + '</div>';
     if (cur) h += '<div class="btns"><button class="btn danger" data-a="simLineDelete">' + I('trash') + T('Удалить строку', 'Delete line') + '</button></div>';
     return { title: cur ? T('Строка сценария', 'Scenario line') : (f.kind === 'expense' ? T('Доп. расход', 'Extra expense') : T('Доп. доход', 'Extra income')), html: h, done: 'simLineSave', doneLabel: T('Сохранить', 'Save') };
   };
   App.actions.simLineSave = function () {
     var m = S.modal, f = m.f, amt = App.toMinor(f.amount), u = S.ui.sim;
-    if (!f.title || !amt) return;
-    var line = { id: m.id || C.uid('sln'), kind: f.kind === 'expense' ? 'expense' : 'income', title: f.title, amount: amt, start: f.start, repeat: f.repeat === 'monthly' ? 'monthly' : 'once', count: f.repeat === 'monthly' ? Math.max(1, Math.min(36, parseInt(f.count, 10) || 1)) : 1 };
+    if (amt == null || amt < 0) { m.err = T('Введите сумму', 'Enter an amount'); App.renderModal(); return; }
+    if (!/^\d{4}-\d{2}$/.test(f.start || '')) { m.err = T('Укажите месяц', 'Set a month'); App.renderModal(); return; }
+    var line = { id: m.id || C.uid('sln'), kind: f.kind || 'income', title: f.title || (f.kind === 'expense' ? T('Расход', 'Expense') : T('Доход', 'Income')), amount: amt, start: f.start, repeat: f.repeat || 'once', count: Math.max(1, parseInt(f.count, 10) || 1) };
     u.lines = u.lines || [];
     if (m.id) { var i; for (i = 0; i < u.lines.length; i++) if (u.lines[i].id === m.id) { u.lines[i] = line; break; } }
     else u.lines.push(line);
@@ -169,6 +256,7 @@
   };
   App.actions.simLineDelete = function () { var id = S.modal.id; S.ui.sim.lines = (S.ui.sim.lines || []).filter(function (l) { return l.id !== id; }); App.closeModal(); App.render(); };
 
+  /* ---------- health ---------- */
   /* ---------- health ---------- */
   App.screens.health = function () {
     var hs = C.healthScore(S.L, S.today), col = hs.score >= 70 ? 'var(--income)' : hs.score >= 45 ? 'var(--planned)' : 'var(--expense)';
@@ -300,7 +388,7 @@
   /* ---------- about & limitations ---------- */
   App.screens.about = function () {
     var li = function (a) { return '<li>' + a + '</li>'; };
-    var h = '<div class="card"><div class="b">Akbar Finance 3.0 · v3.3</div><div class="small muted mt8">' + T('Личное приложение учёта финансов. Интерфейс вдохновлён структурой Wallet by BudgetBakers, собственная реализация без чужих логотипов и ресурсов.', 'Personal finance ledger. Interface inspired by the Wallet by BudgetBakers layout; own implementation, no third-party logos or assets.') + '</div></div>';
+    var h = '<div class="card"><div class="b">Akbar Finance 3.0 · v3.4</div><div class="small muted mt8">' + T('Личное приложение учёта финансов. Интерфейс вдохновлён структурой Wallet by BudgetBakers, собственная реализация без чужих логотипов и ресурсов.', 'Personal finance ledger. Interface inspired by the Wallet by BudgetBakers layout; own implementation, no third-party logos or assets.') + '</div></div>';
     h += '<div class="card"><div class="card-h"><span class="t">' + T('Честные ограничения', 'Honest limitations') + '</span></div><ul class="small ul">' +
       li(T('Нет облачной синхронизации и аккаунтов. Данные — только в этом браузере на этом устройстве.', 'No cloud sync or accounts. Data stays in this browser on this device.')) +
       li(T('Перенос между iPhone и Windows — вручную через экспорт/импорт JSON.', 'Moving between iPhone and Windows is manual via JSON export/import.')) +

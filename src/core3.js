@@ -172,10 +172,158 @@
   function addBlock(L, o) { var b = ensureBlocks(L), x = { id: C.uid('blk'), type: o.type, hidden: false, title: o.title || '', ref: o.ref || null, refs: o.refs || [] }; b.push(x); return x; }
   function removeBlock(L, id) { var b = ensureBlocks(L), x = b.filter(function (q) { return q.id === id; })[0]; if (!x || CORE_BLOCKS.indexOf(x.type) >= 0) return false; L.settings.planBlocks = b.filter(function (q) { return q.id !== id; }); return true; }
 
+
+  /* ---------- simulator presets (no private amounts in code; salary low/high come from L.incomePlan) ---------- */
+  function defaultSimParams(id) {
+    if (id === 'neg') return { salaryBand: 'low', salaryPct: -20, expensesPct: 20, incomePct: 0, bonus: 0 };
+    if (id === 'opt') return { salaryBand: 'exp', salaryPct: 0, expensesPct: 0, incomePct: 10, bonus: 0 };
+    return { salaryBand: 'exp', salaryPct: 0, expensesPct: 0, incomePct: 0, bonus: 0 };
+  }
+  function normalizeSimParams(id, params) {
+    var d = defaultSimParams(id), p = params ? Object.assign({}, params) : {};
+    if (!p.salaryBand) p.salaryBand = d.salaryBand;
+    if (p.salaryPct == null || p.salaryPct === '') p.salaryPct = d.salaryPct;
+    if (p.expensesPct == null || p.expensesPct === '') p.expensesPct = d.expensesPct;
+    if (p.incomePct == null || p.incomePct === '') p.incomePct = d.incomePct;
+    if (p.bonus == null || p.bonus === '') p.bonus = d.bonus;
+    p.salaryPct = isFinite(+p.salaryPct) ? +p.salaryPct : d.salaryPct;
+    p.expensesPct = isFinite(+p.expensesPct) ? +p.expensesPct : d.expensesPct;
+    p.incomePct = isFinite(+p.incomePct) ? +p.incomePct : d.incomePct;
+    p.bonus = isFinite(+p.bonus) ? Math.max(0, Math.round(+p.bonus)) : 0;
+    return p;
+  }
+  function incomePlanLineForItem(L, item) {
+    var lines = (L && L.incomePlan && L.incomePlan.lines) || [], i, t = normTitle(item && item.title);
+    if (!item) return null;
+    for (i = 0; i < lines.length; i++) if (normTitle(lines[i].title) === t && t) return lines[i];
+    if (item.categoryId === 'salary' || item.type === 'salary') {
+      for (i = 0; i < lines.length; i++) if (lines[i].type === 'salary') return lines[i];
+    }
+    return null;
+  }
+  function isSalaryItem(L, item) {
+    if (!item || (item.kind !== 'income' && item.kind !== 'unplannedIn')) return false;
+    if (item.categoryId === 'salary' || item.type === 'salary') return true;
+    var line = incomePlanLineForItem(L, item);
+    return !!(line && line.type === 'salary');
+  }
+  /* Look up low/exp/high for this planned item in the payment month (date), not the budget month. */
+  function incomePlanBandForItem(L, item, band) {
+    var line = incomePlanLineForItem(L, item), ym, mo, v;
+    if (!line || !item || !item.date) return null;
+    ym = ymOf(item.date);
+    mo = L.incomePlan && L.incomePlan.months && L.incomePlan.months[ym] && L.incomePlan.months[ym][line.id];
+    if (!mo) return null;
+    v = band === 'low' ? mo.low : band === 'high' ? mo.high : mo.exp;
+    if (v == null) v = mo.exp;
+    return v == null ? null : v;
+  }
+  function hasSalaryBand(L, band) {
+    var ip = L && L.incomePlan, id, ym, mo, lines, i;
+    if (!ip || !ip.months) return false;
+    lines = (ip.lines || []).filter(function (l) { return l.type === 'salary'; });
+    if (!lines.length) return false;
+    for (ym in ip.months) if (Object.prototype.hasOwnProperty.call(ip.months, ym)) {
+      mo = ip.months[ym];
+      for (i = 0; i < lines.length; i++) {
+        id = lines[i].id;
+        if (mo[id] && mo[id][band] != null && mo[id][band] !== mo[id].exp) return true;
+      }
+    }
+    return false;
+  }
+  function adjustPlanParts(L, mp, params) {
+    params = normalizeSimParams(null, params);
+    var parts = C.planParts(mp), income = parts.income, foundSalary = false;
+    (mp.items || []).forEach(function (it) {
+      if (!isSalaryItem(L, it)) return;
+      foundSalary = true;
+      var cur = it.amount || 0, next = null;
+      if (params.salaryBand && params.salaryBand !== 'exp') next = incomePlanBandForItem(L, it, params.salaryBand);
+      if (next == null && params.salaryPct) next = Math.round(cur * (1 + params.salaryPct / 100));
+      if (next != null) income += next - cur;
+    });
+    if (!foundSalary && params.salaryPct && params.salaryBand !== 'exp') {
+      (mp.items || []).forEach(function (it) {
+        if (it.kind !== 'income' && it.kind !== 'unplannedIn') return;
+        var cur = it.amount || 0;
+        income += Math.round(cur * (1 + params.salaryPct / 100)) - cur;
+      });
+    }
+    if (params.incomePct) income += Math.round(income * params.incomePct / 100);
+    if (params.bonus) income += params.bonus;
+    var expenses = parts.expenses;
+    if (params.expensesPct) expenses = Math.round(expenses * (1 + params.expensesPct / 100));
+    return { income: income, borrow: parts.borrow, parents: parts.parents, loans: parts.loans, expenses: expenses, other: parts.other, raw: parts };
+  }
+  function emptySums() { return { income: 0, borrow: 0, parents: 0, loans: 0, expenses: 0, other: 0, savings: 0, extraIn: 0, extraOut: 0, result: 0 }; }
+  function addSums(a, row) {
+    a.income += row.income; a.borrow += row.borrow; a.parents += row.parents; a.loans += row.loans;
+    a.expenses += row.expenses; a.other += row.other; a.savings += row.savings || 0;
+    a.extraIn += row.extraIn || 0; a.extraOut += row.extraOut || 0; a.result += row.result;
+  }
+  function avgSums(sums, n) {
+    var o = {}, k; n = n || 1;
+    for (k in sums) if (Object.prototype.hasOwnProperty.call(sums, k)) o[k] = Math.round(sums[k] / n);
+    return o;
+  }
+  var origScenarioCalc = C.scenarioCalc;
+  function paramsActive(p) {
+    p = p || {};
+    return (p.salaryBand && p.salaryBand !== 'exp') || !!p.salaryPct || !!p.expensesPct || !!p.incomePct || !!p.bonus;
+  }
+  function scenarioCalc(s, L, today, opts) {
+    s = s || {}; opts = opts || {};
+    if (!(L && s.usePlan !== false)) return origScenarioCalc(s, L, today, opts);
+    today = today || opts.today || C.todayISO();
+    var months = C.clampHorizon(s.months), lines = Array.isArray(s.lines) ? s.lines : [];
+    var startYm = s.startYm || C.simStartYm(L, today);
+    var ov = s.overrides || {};
+    var params = normalizeSimParams(s.id, s.params);
+    var rows = [], cum = 0, i, ym, extra, result, adj, income, out, savings, sums = emptySums();
+    for (i = 0; i < months; i++) {
+      ym = addMonths(startYm, i);
+      adj = adjustPlanParts(L, C.monthPlan(L, ym, opts), params);
+      income = adj.income + adj.borrow;
+      if (ov.income) income = (s.income || 0) + adj.borrow;
+      out = adj.parents + adj.loans + adj.expenses + adj.other;
+      if (ov.parents) out = out - adj.parents + (s.parents || 0);
+      if (ov.loans) out = out - adj.loans + (s.loans || 0);
+      if (ov.expenses) out = out - adj.expenses + (s.expenses || 0);
+      if (ov.other) out = out - adj.other + (s.other || 0);
+      savings = ov.savings ? (s.savings || 0) : 0;
+      extra = C.scenarioLinesInMonth(lines, ym);
+      result = income - out - savings + extra.income - extra.expense;
+      cum += result;
+      var row = {
+        n: i + 1, ym: ym,
+        income: ov.income ? (s.income || 0) : adj.income, borrow: adj.borrow,
+        parents: ov.parents ? (s.parents || 0) : adj.parents,
+        loans: ov.loans ? (s.loans || 0) : adj.loans,
+        expenses: ov.expenses ? (s.expenses || 0) : adj.expenses,
+        other: ov.other ? (s.other || 0) : adj.other,
+        savings: savings,
+        out: out + savings, extraIn: extra.income, extraOut: extra.expense,
+        result: result, free: cum, cumulative: cum, parts: adj
+      };
+      rows.push(row); addSums(sums, row);
+    }
+    var base = origScenarioCalc({ months: months, usePlan: true, startYm: startYm, lines: [], overrides: {} }, L, today, opts);
+    return {
+      monthly: rows[0] ? rows[0].result : 0, total: cum, savedTotal: cum, startYm: startYm, months: months, rows: rows, fromPlan: true,
+      sums: sums, avgs: avgSums(sums, months || 1), baseTotal: base.total, delta: cum - base.total,
+      params: params, adjusted: paramsActive(params) || !!(ov.income || ov.parents || ov.loans || ov.expenses || ov.other || ov.savings)
+    };
+  }
+  function ensureScenarioParams(L) {
+    if (!Array.isArray(L.scenarios)) return;
+    L.scenarios.forEach(function (sc) { sc.params = normalizeSimParams(sc.id, sc.params); });
+  }
+
   return { SERIES_KINDS: SERIES_KINDS, SERIES_HORIZON: HORIZON, seriesBaseAmount: baseAmount, seriesAmountFor: amountFor, seriesIsOverridden: isOverridden, seriesAmountUnset: amountUnset,
     seriesMonths: seriesMonths, seriesEnd: seriesEnd, syncSeries: syncSeries, migrateSeries: migrateSeries, newSeries: newSeries, setSeriesAmount: setSeriesAmount, resetSeriesMonth: resetSeriesMonth,
     seriesLaterOverrides: laterOverrides, seriesSummary: seriesSummary, CORE_BLOCKS: CORE_BLOCKS, GUARDED_BLOCKS: GUARDED, ensureBlocks: ensureBlocks, moveBlock: moveBlock,
-    setBlockHidden: setBlockHidden, addBlock: addBlock, removeBlock: removeBlock, prepareLedger: function (L, today) { migrateSeries(L, today); syncSeries(L, today); ensureBlocks(L); return L; } };
+    setBlockHidden: setBlockHidden, addBlock: addBlock, removeBlock: removeBlock, defaultSimParams: defaultSimParams, normalizeSimParams: normalizeSimParams, incomePlanLineForItem: incomePlanLineForItem, isSalaryItem: isSalaryItem, incomePlanBandForItem: incomePlanBandForItem, hasSalaryBand: hasSalaryBand, adjustPlanParts: adjustPlanParts, scenarioCalc: scenarioCalc, ensureScenarioParams: ensureScenarioParams, prepareLedger: function (L, today) { migrateSeries(L, today); syncSeries(L, today); ensureBlocks(L); ensureScenarioParams(L); return L; } };
 });
 /* hook: every load/import path goes through normalizeLedger, so migration happens there too */
 (function (C) {
