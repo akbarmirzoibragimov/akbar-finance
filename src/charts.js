@@ -76,6 +76,29 @@
     REG[o.id] = { type: 'donut', items: items, total: total, fmt: o.fmtTip, center: o.center };
     return '<div class="chart" data-chart="' + o.id + '" style="display:grid;place-items:center">' + svg + '<div class="ring-c" style="position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;text-align:center"><div><div class="small muted dc-l">' + esc(o.centerLabel || '') + '</div><div class="b dc-v" style="font-size:18px">' + esc(o.center || '') + '</div></div></div></div>';
   }
+  /* multi-ring chart: o.rings = [{w, items:[{v,color,label,info,pctLabel}]}] outer first; tap a slice → o.id info box */
+  function rings(o) {
+    var size = o.size || 180, cx = size / 2, gap = o.gap || 4, rIdx = 0, svg = '<svg viewBox="0 0 ' + size + ' ' + size + '" width="' + size + '" height="' + size + '" style="max-width:100%;overflow:visible">';
+    var outerR = size / 2 - (o.pad || 4), segs = [];
+    o.rings.forEach(function (rg, ri) {
+      var w = rg.w || 16, r = outerR - w / 2, c = 2 * Math.PI * r, items = rg.items.filter(function (i) { return i.v > 0; }), total = items.reduce(function (s, i) { return s + i.v; }, 0), off = 0;
+      svg += '<circle cx="' + cx + '" cy="' + cx + '" r="' + r + '" fill="none" stroke="var(--card2)" stroke-width="' + w + '"/>';
+      items.forEach(function (it) {
+        var len = total ? it.v / total * c : 0, k = segs.length, sp = items.length > 1 ? Math.min(2, len / 3) : 0;
+        segs.push(it);
+        svg += '<circle data-rseg="' + k + '" cx="' + cx + '" cy="' + cx + '" r="' + r + '" fill="none" stroke="' + it.color + '" stroke-width="' + w + '" stroke-dasharray="' + Math.max(0, len - sp) + ' ' + (c - len + sp) + '" stroke-dashoffset="' + (-off) + '" transform="rotate(-90 ' + cx + ' ' + cx + ')" style="cursor:pointer"/>';
+        if (rg.labels && it.pctLabel && len > 18) {
+          var ang = ((off + len / 2) / c) * 2 * Math.PI - Math.PI / 2, lx = cx + Math.cos(ang) * r, ly = cx + Math.sin(ang) * r;
+          svg += '<text x="' + lx.toFixed(1) + '" y="' + (ly + 3.5).toFixed(1) + '" text-anchor="middle" font-size="' + (rg.labelSize || 10) + '" font-weight="700" fill="#fff" style="pointer-events:none;paint-order:stroke;stroke:rgba(0,0,0,.35);stroke-width:2px">' + esc(it.pctLabel) + '</text>';
+        }
+        off += len;
+      });
+      outerR -= w + gap; rIdx++;
+    });
+    svg += '</svg>';
+    REG[o.id] = { type: 'rings', segs: segs };
+    return '<div class="chart rings" data-chart="' + o.id + '" style="width:' + size + 'px;height:' + size + 'px;position:relative;flex:none">' + svg + '<div class="ring-c" style="position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;text-align:center">' + (o.centerHtml || '') + '</div></div>';
+  }
   function ring(pct, color, size, inner) {
     size = size || 64; var r = size / 2 - 5, c = 2 * Math.PI * r, p = Math.max(0, Math.min(1, pct || 0));
     return '<div class="ring" style="width:' + size + 'px;height:' + size + 'px"><svg viewBox="0 0 ' + size + ' ' + size + '" width="' + size + '" height="' + size + '"><circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" fill="none" stroke="var(--card2)" stroke-width="7"/><circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" fill="none" stroke="' + color + '" stroke-width="7" stroke-linecap="round" stroke-dasharray="' + (c * p) + ' ' + c + '" transform="rotate(-90 ' + size / 2 + ' ' + size / 2 + ')"/></svg><div class="in">' + (inner || '') + '</div></div>';
@@ -96,6 +119,13 @@
       var gi = Math.max(0, Math.min(R.groups.length - 1, Math.floor(px / R.gw))), gr = R.groups[gi];
       left = (gi + .5) * R.gw / R.W * rect.width;
       html = '<b>' + esc(gr.tip || gr.label) + '</b>' + gr.values.map(function (v) { return '<br><span style="color:' + v.color + '">●</span> ' + esc(v.name || '') + ' ' + esc(R.fmt ? R.fmt(v.v) : v.v); }).join('');
+    } else if (R.type === 'rings') {
+      var rs = ev.target.getAttribute && ev.target.getAttribute('data-rseg');
+      if (rs == null) return;
+      var sg = R.segs[+rs], box = document.getElementById(el.getAttribute('data-chart') + '-info');
+      el.querySelectorAll('[data-rseg]').forEach(function (c) { c.style.opacity = c === ev.target ? 1 : .45; });
+      if (box && sg.info) { box.innerHTML = sg.info; box.classList.remove('hidden'); }
+      return;
     } else if (R.type === 'donut') {
       var seg = ev.target.getAttribute && ev.target.getAttribute('data-seg');
       if (seg == null) return;
@@ -115,9 +145,9 @@
     var cur = el.querySelector('.cursor'); if (cur) cur.setAttribute('opacity', '0');
   }
   if (typeof document !== 'undefined') {
-    document.addEventListener('pointermove', function (e) { if (e.pointerType === 'mouse') handle(e); });
+    document.addEventListener('pointermove', function (e) { if (e.pointerType === 'mouse' && !(e.target.closest && e.target.closest('.chart.rings'))) handle(e); });
     document.addEventListener('pointerdown', handle);
     document.addEventListener('pointerout', function (e) { if (e.pointerType === 'mouse' && e.target.closest && e.target.closest('.chart') && !(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.chart') === e.target.closest('.chart'))) leave(e); });
   }
-  g.AFCharts = { line: line, bars: bars, donut: donut, ring: ring, REG: REG };
+  g.AFCharts = { line: line, bars: bars, donut: donut, ring: ring, rings: rings, REG: REG };
 })(typeof self !== 'undefined' ? self : this);

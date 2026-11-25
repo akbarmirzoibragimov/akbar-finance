@@ -31,7 +31,11 @@
   --bar:rgba(249,249,249,.78); --overlay:rgba(0,0,0,.3); --shadow:0 10px 40px rgba(0,0,0,.15); color-scheme:light;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;padding:0;background:var(--bg);color:var(--text);overflow-x:hidden;max-width:100%}
+/* Only the viewport may scroll vertically. Never give html AND body an overflow value: body would become its own
+   scroll container and the mouse wheel stops working on desktop (bug t28u). `clip` hides horizontal overflow without
+   creating a scroll container. */
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);max-width:100%}
+html{overflow-x:hidden;overflow-x:clip}
 body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI Variable","Segoe UI",system-ui,Roboto,"Helvetica Neue",Arial,sans-serif;
   font-size:16px;line-height:1.3;-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;overscroll-behavior-y:none}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -47,7 +51,7 @@ svg{display:block}
 .hidden{display:none!important}
 
 /* ---------- layout ---------- */
-#app{min-height:100vh;min-height:100dvh;display:flex;width:100%;max-width:100vw;overflow-x:hidden}
+#app{min-height:100vh;min-height:100dvh;display:flex;width:100%;max-width:100vw;overflow-x:clip}
 .main{flex:1;min-width:0;padding:calc(var(--sat) + 8px) calc(16px + var(--sar)) calc(var(--tabh) + var(--sab) + 96px) calc(16px + var(--sal));}
 .screen{max-width:760px;margin:0 auto;animation:fadeIn .22s ease}
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -327,6 +331,88 @@ input[type=checkbox].sw:checked::after{left:22px}
 .alert.big{font-size:16px;padding:14px 16px}
 .boot-splash{min-height:100vh;display:grid;place-items:center;color:var(--text2);font-weight:600;letter-spacing:.3px}
 
+/* ===== v3 (3.1): dashboard, rings, sections, academy ===== */
+.space-seg{margin:2px 0 4px}
+.v3top{display:block}
+@media (min-width:1000px){.v3top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}.v3top>.card,.v3top>.v3sec{margin-top:12px}.v3top>.v3sec>.v3sec-b>.card{margin-top:0}}
+.v3ring-row{display:flex;gap:12px;align-items:center;min-width:0}
+.v3side{flex:1;min-width:0}
+.v3lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--text2)}
+.v3big{font-size:22px;font-weight:700;letter-spacing:-.5px;line-height:1.2;margin:2px 0 6px;overflow-wrap:anywhere}
+.v3rate{display:block;text-align:left;margin-top:8px;font-size:10.5px;line-height:1.45;color:var(--text2);background:var(--card2);border-radius:8px;padding:6px 8px;width:100%}
+.ring-c .rc-k{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--text2)}
+.ring-c .rc-v{font-size:15px;font-weight:700;letter-spacing:-.4px;line-height:1.2}
+.ring-c .rc-u{font-size:10px;color:var(--text2)}
+.ring-info{margin-top:10px;background:var(--card2);border-radius:10px;padding:8px 12px;font-size:13px;line-height:1.45}
+.v3legend{display:grid;grid-template-columns:1fr;gap:6px;margin-top:12px}
+@media (min-width:560px){.v3legend{grid-template-columns:1fr 1fr;column-gap:16px}}
+.v3legend .leg{display:grid;grid-template-columns:10px minmax(0,1fr) auto auto;gap:8px;align-items:center;font-size:12.5px}
+.v3legend .leg i{width:10px;height:10px;border-radius:3px}
+.v3legend .leg-p{color:var(--text2);min-width:44px;text-align:right}
+.v3legend .leg-v{min-width:86px;text-align:right}
+.v3boxes{display:flex;flex-direction:column;gap:8px;flex:1;min-width:0}
+.v3boxes .box{background:var(--card2);border-radius:12px;padding:10px 12px}
+.v3boxes .p{font-size:20px;font-weight:700}
+.v3boxes .l{font-size:12px;color:var(--text2);line-height:1.4}
+.v3kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+@media (min-width:1000px){.v3kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.v3kpis .kpi{background:var(--card);border-radius:14px;padding:12px 14px;min-width:0}
+.v3kpis .kpi .v{overflow-wrap:anywhere}
+.v3quote{display:flex;gap:10px;align-items:flex-start}
+.v3quote .qmark{font-size:34px;line-height:.9;color:var(--accent);font-weight:700}
+.v3quote p{margin:0;font-size:14.5px;line-height:1.45}
+.v3quote .who{font-size:12px;color:var(--text2);margin-top:6px}
+.iconbtn.sm{width:28px;height:28px;flex:none}
+.v3sec{margin-top:18px}
+.v3sec-h{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:32px}
+.v3sec-t{display:flex;align-items:center;gap:6px;font-size:19px;font-weight:700;color:var(--text);min-width:0;text-align:left}
+.v3sec-t span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v3sec-t .ic{transition:transform .2s;color:var(--text2);flex:none}
+.v3sec.col .v3sec-t .ic{transform:rotate(-90deg)}
+.v3sec-b>.card:first-child,.v3sec-b>.list:first-child,.v3sec-b>.acc-grid:first-child{margin-top:6px}
+.row.total{background:var(--card2)}
+.linkbtn{color:var(--accent);font-size:13px;padding:4px 2px}
+.v3goals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:6px}
+@media (min-width:560px){.v3goals{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.gcard{background:var(--card);border-radius:14px;padding:12px;text-align:left;display:flex;flex-direction:column;gap:4px;min-width:0;color:var(--text)}
+.gcard .gt{font-size:13px;font-weight:600;min-height:34px}
+.gcard .gp{font-size:22px;font-weight:700}
+.gcard .gs{font-size:11.5px;color:var(--text2)}
+.gcard .bar{margin-top:4px}
+.gcard.add{align-items:center;justify-content:center;color:var(--accent);border:1.5px dashed var(--sep);background:transparent;min-height:110px}
+.ellipsis2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.v3empty{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:28px 18px}
+.v3empty>.ic{width:40px;height:40px;color:var(--accent)}
+.tpl-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.tpl{background:var(--card);border-radius:14px;padding:12px;text-align:left;display:flex;flex-direction:column;gap:6px;color:var(--text);min-width:0}
+.group-t{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;padding:10px 14px 2px}
+/* academy */
+.acad-hero{background:linear-gradient(135deg,rgba(94,92,230,.22),var(--card) 60%)}
+.acad-streak{display:inline-flex;align-items:center;gap:4px;color:#FF9F0A;font-size:16px}
+.acad-lesson,.acad-teaser{display:flex;gap:12px;align-items:center;width:100%;text-align:left;color:var(--text)}
+.acad-body p{line-height:1.6;margin:0 0 10px}
+.acad-body h3{font-size:16px;margin:16px 0 6px}
+.acad-body ul{margin:0 0 10px;padding-left:20px;line-height:1.55}
+.acad-callout{display:flex;gap:8px;background:rgba(10,132,255,.12);border-radius:10px;padding:10px 12px;margin:10px 0;line-height:1.5;font-size:14px}
+.acad-callout .ic{flex:none;color:var(--accent);margin-top:2px}
+.acad-q .b{line-height:1.4}
+.acad-opt{display:block;width:100%;text-align:left;background:var(--card2);border-radius:10px;padding:10px 12px;margin-top:8px;color:var(--text);border:1.5px solid transparent;font-size:14px;line-height:1.35}
+.acad-opt.sel{border-color:var(--accent)}
+.acad-opt.ok{border-color:var(--income);background:rgba(48,209,88,.14)}
+.acad-opt.bad{border-color:var(--expense);background:rgba(255,69,58,.12)}
+.wk-n{width:28px;height:28px;border-radius:8px;background:var(--card2);display:grid;place-items:center;font-size:12px;font-weight:700;flex:none}
+.row.dim{opacity:.55}
+.lvl-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+a.row{color:var(--text);text-decoration:none}
+.v3big small{font-size:12px;font-weight:600;color:var(--text2)}
+.v3big{white-space:nowrap;font-size:21px}
+@media (max-width:380px){.v3big{font-size:18px}}
+.v3sec-h .more{white-space:nowrap;display:inline-flex;align-items:center;gap:2px;flex:none}
+.v3quote .grow{flex:1;min-width:0}
+.sec-h .more{white-space:nowrap;display:inline-flex;align-items:center;gap:2px;flex:none}
+.grow{flex:1;min-width:0}
+@media (min-width:1000px){.v3charts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.v3charts>.card{margin-top:6px}.chart:not(.rings){max-width:640px;margin-left:auto;margin-right:auto}}
+
 </style>
 </head>
 <body>
@@ -443,8 +529,10 @@ input[type=checkbox].sw:checked::after{left:22px}
       schema: SCHEMA, version: VERSION,
       meta: { id: uid('ledger'), name: opts.name || 'Akbar Finance', createdAt: new Date().toISOString(), asOf: t, baseCurrency: 'AED' },
       settings: { lang: opts.lang || 'ru', theme: 'dark', obligationsHorizonDays: 30, upcomingDays: 7 },
-      rates: { AED: 1, USD: 3.6725 },
-      rateMeta: { USD: { source: 'AED/USD peg 3.6725', confirmed: true } },
+      rates: { AED: 1, USD: 3.6725, UZS: 1 / 3264.51 },
+      rateMeta: { USD: { source: 'AED/USD peg 3.6725', confirmed: true }, UZS: { source: 'manual', confirmed: false } },
+      rateDates: { USD: '2026-11-25', UZS: '2026-11-25' },
+      incomePlan: { lines: [], months: {}, actuals: {} }, budgetSweeps: {},
       accounts: [], transactions: [], planned: [], categories: defaultCategories(),
       budgetPlan: { total: 50000 },
       goals: [], projects: [], assets: [],
@@ -1441,6 +1529,10 @@ input[type=checkbox].sw:checked::after{left:22px}
     if (!Array.isArray(L.scenarios) || !L.scenarios.length) L.scenarios = defaultScenarios();
     L.settings = Object.assign(newLedger({}).settings, obj.settings || {});
     L.rates = Object.assign({ AED: 1 }, obj.rates || {});
+    if (L.rates.UZS == null) { L.rates.UZS = 1 / 3264.51; L.rateDates = Object.assign({}, L.rateDates, { UZS: '2026-11-25' }); }
+    if (!L.rateDates || typeof L.rateDates !== 'object') L.rateDates = { USD: '2026-11-25', UZS: '2026-11-25' };
+    if (!L.incomePlan || typeof L.incomePlan !== 'object') L.incomePlan = { lines: [], months: {}, actuals: {} };
+    if (!L.budgetSweeps || typeof L.budgetSweeps !== 'object') L.budgetSweeps = {};
     L.dismissed = obj.dismissed || {};
     L.budgetPlan = obj.budgetPlan || { total: 50000 };
     L.family = obj.family || { apartmentGoalId: null };
@@ -1497,6 +1589,239 @@ input[type=checkbox].sw:checked::after{left:22px}
     assistant: assistant, fingerprint: fingerprint, validateLedger: validateLedger, normalizeLedger: normalizeLedger,
     mergeLedger: mergeLedger, exportCSV: exportCSV, catChildren: catChildren, plannedIncluded: plannedIncluded
   };
+});
+
+</script>
+<script>
+/* Akbar Finance 3.1 — core extensions: spaces (personal/business), portfolio & debt rings, yearly income plan,
+   personal-budget remainder → savings, expense summaries, goal templates/stages, daily quotes, academy schedule.
+   Pure functions on the ledger (amounts in integer fils). Works in the browser (extends AFCore) and in Node. */
+(function (root, factory) {
+  var C = (typeof module === 'object' && module.exports) ? require('./core.js') : root.AFCore;
+  var ext = factory(C);
+  Object.keys(ext).forEach(function (k) { C[k] = ext[k]; });
+  if (typeof module === 'object' && module.exports) module.exports = C;
+})(typeof self !== 'undefined' ? self : this, function (C) {
+  'use strict';
+  var sum = C.sum, byId = C.byId, toBase = C.toBase;
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function parseD(s) { return new Date(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)); }
+
+  /* ---------- spaces ---------- */
+  function spaceOf(a) { return (a && a.space) || 'personal'; }
+  /* Read-only view of the ledger limited to one space. Mutations must always go to the real ledger. */
+  function spaceView(L, space) {
+    space = space || 'personal';
+    var ids = {}; L.accounts.forEach(function (a) { if (spaceOf(a) === space) ids[a.id] = 1; });
+    var has = function (id) { return !!id && !!ids[id]; };
+    return Object.assign({}, L, {
+      accounts: L.accounts.filter(function (a) { return ids[a.id]; }),
+      transactions: L.transactions.filter(function (t) { return has(t.fromAccountId) || has(t.toAccountId); }),
+      planned: L.planned.filter(function (p) {
+        if (p.accountId || p.fromAccountId || p.toAccountId) return has(p.accountId) || has(p.fromAccountId) || has(p.toAccountId);
+        return space === 'personal';
+      }),
+      goals: (L.goals || []).filter(function (g) { return ((g.space || 'personal') === space); }),
+      budgetPlan: space === 'personal' ? L.budgetPlan : { total: 0 },
+      __space: space
+    });
+  }
+
+  /* ---------- portfolio "All finance" ---------- */
+  function portfolio(L, today) {
+    var m = C.metrics(L, today), ds = C.debtSummary(L, today), bal = m.balances;
+    var debtRows = ds.rows.filter(function (r) { return r.debt > 0 && !r.acc.archived; }).map(function (r) {
+      return { id: r.acc.id, name: r.acc.name, value: toBase(L, r.debt, r.acc.currency) || 0, color: r.acc.color, term: r.acc.term === 'long' ? 'long' : 'short' };
+    }).sort(function (a, b) { return b.value - a.value; });
+    var ownRows = L.accounts.filter(function (a) { return !C.isLiab(a) && !a.archived; }).map(function (a) {
+      return { id: a.id, name: a.name, value: toBase(L, bal[a.id], a.currency) || 0, color: a.color, role: a.role || null };
+    }).filter(function (r) { return r.value > 0; }).sort(function (a, b) { return b.value - a.value; });
+    var debt = sum(debtRows, function (r) { return r.value; });
+    var net = m.own - debt, mode = net < 0 ? 'debt' : 'assets';
+    var segs = mode === 'debt' ? debtRows : ownRows, tot = sum(segs, function (r) { return r.value; });
+    segs.forEach(function (r) { r.pct = tot ? r.value / tot : 0; });
+    var shortD = sum(debtRows.filter(function (r) { return r.term === 'short'; }), function (r) { return r.value; });
+    return { own: m.own, debt: debt, net: net, mode: mode, segments: segs, short: shortD, long: debt - shortD,
+      shortPct: debt ? shortD / debt : 0, longPct: debt ? (debt - shortD) / debt : 0, netWorth: m.netWorth, unconvertible: m.unconvertible };
+  }
+  /* AED minor → other currency minor using the user's manual rates (null if no rate) */
+  function convert(L, minorAED, cur) { return C.fromBase(L, minorAED, cur); }
+
+  /* ---------- debt ring: outer short/long, inner per creditor ---------- */
+  function debtRing(L, today) {
+    today = today || C.todayISO();
+    var ds = C.debtSummary(L, today);
+    var inner = ds.rows.filter(function (r) { return r.debt > 0; }).map(function (r) {
+      var next = L.planned.filter(function (p) { return p.accountId === r.acc.id && p.kind === 'payment' && C.plannedIncluded(p) && C.plannedState(L, p, today).open; })
+        .sort(function (a, b) { return a.date < b.date ? -1 : 1; })[0] || null;
+      return { id: r.acc.id, name: r.acc.name, value: toBase(L, r.debt, r.acc.currency) || 0, color: r.acc.color, term: r.acc.term === 'long' ? 'long' : 'short',
+        next: next ? { date: next.date, amount: C.plannedState(L, next, today).remaining, title: next.title } : null };
+    }).sort(function (a, b) { return (a.term === b.term ? b.value - a.value : (a.term === 'short' ? -1 : 1)); });
+    var total = sum(inner, function (r) { return r.value; });
+    inner.forEach(function (r) { r.pct = total ? r.value / total : 0; });
+    var shortV = sum(inner.filter(function (r) { return r.term === 'short'; }), function (r) { return r.value; });
+    var base = ds.initialTotal, repaid = ds.repaidTotal;
+    return { total: total, short: shortV, long: total - shortV, shortPct: total ? shortV / total : 0, longPct: total ? (total - shortV) / total : 0,
+      outer: [{ id: 'short', value: shortV, pct: total ? shortV / total : 0 }, { id: 'long', value: total - shortV, pct: total ? (total - shortV) / total : 0 }],
+      inner: inner, repaid: repaid, repaidPct: base > 0 ? Math.max(0, Math.min(1, repaid / base)) : 0 };
+  }
+
+  /* ---------- yearly expected-income plan (by month of receipt) ----------
+     L.incomePlan = { lines:[{id,title,type}], months:{ym:{lineId:{exp,low,high}}}, actuals:{ym:{lineId:amount}} } */
+  function ensureIncomePlan(L) { if (!L.incomePlan) L.incomePlan = { lines: [], months: {}, actuals: {} }; ['lines'].forEach(function (k) { if (!Array.isArray(L.incomePlan[k])) L.incomePlan[k] = []; }); ['months', 'actuals'].forEach(function (k) { if (!L.incomePlan[k] || typeof L.incomePlan[k] !== 'object') L.incomePlan[k] = {}; }); return L.incomePlan; }
+  function incomeMonth(L, ym) {
+    var ip = L.incomePlan || { lines: [], months: {}, actuals: {} }, mo = ip.months[ym] || {}, ac = ip.actuals[ym] || null;
+    var lines = (ip.lines || []).map(function (l) {
+      var e = mo[l.id] || null, a = ac && ac[l.id] != null ? ac[l.id] : null;
+      return { id: l.id, title: l.title, type: l.type, exp: e ? e.exp : 0, low: e ? (e.low != null ? e.low : e.exp) : 0, high: e ? (e.high != null ? e.high : e.exp) : 0, actual: a, variance: a == null ? null : a - (e ? e.exp : 0), planned: !!e };
+    });
+    var exp = sum(lines, function (l) { return l.exp; }), entered = ac != null && lines.some(function (l) { return l.actual != null; });
+    var actual = entered ? sum(lines, function (l) { return l.actual || 0; }) : null;
+    var rec = C.flows(L, ym + '-01', C.lastDay(ym));
+    return { ym: ym, lines: lines, exp: exp, low: sum(lines, function (l) { return l.low; }), high: sum(lines, function (l) { return l.high; }),
+      actual: actual, variance: actual == null ? null : actual - exp, variancePct: actual == null || !exp ? null : (actual - exp) / exp, recorded: rec.earned + rec.returnFunds };
+  }
+  function incomePlanView(L, year, mode) {
+    var months = []; for (var i = 1; i <= 12; i++) months.push(incomeMonth(L, year + '-' + pad(i)));
+    var agg = function (list, key, label) {
+      var withActual = list.filter(function (x) { return x.actual != null; });
+      var a = withActual.length ? sum(withActual, function (x) { return x.actual; }) : null, eA = sum(withActual, function (x) { return x.exp; });
+      return { key: key, label: label, months: list.map(function (x) { return x.ym; }), exp: sum(list, function (x) { return x.exp; }), low: sum(list, function (x) { return x.low; }), high: sum(list, function (x) { return x.high; }),
+        actual: a, expForActual: eA, variance: a == null ? null : a - eA, recorded: sum(list, function (x) { return x.recorded; }), filled: withActual.length, planned: list.filter(function (x) { return x.exp > 0; }).length };
+    };
+    if (mode === 'quarter') return [0, 1, 2, 3].map(function (q) { return agg(months.slice(q * 3, q * 3 + 3), year + '-Q' + (q + 1), 'Q' + (q + 1)); });
+    if (mode === 'year') return [agg(months, String(year), String(year))];
+    return months.map(function (x) { var r = agg([x], x.ym, x.ym); r.detail = x; return r; });
+  }
+  function setIncomeActual(L, ym, lineId, amount) {
+    var ip = ensureIncomePlan(L); ip.actuals[ym] = ip.actuals[ym] || {};
+    if (amount == null || amount === '') delete ip.actuals[ym][lineId]; else { if (!C.isInt(amount) || amount < 0) return { ok: false, errors: ['amount'] }; ip.actuals[ym][lineId] = amount; }
+    if (!Object.keys(ip.actuals[ym]).length) delete ip.actuals[ym];
+    return { ok: true };
+  }
+  function setIncomeExpected(L, ym, lineId, o) {
+    var ip = ensureIncomePlan(L); ip.months[ym] = ip.months[ym] || {};
+    if (!o || !(o.exp > 0)) delete ip.months[ym][lineId]; else ip.months[ym][lineId] = { exp: o.exp, low: o.low != null ? o.low : o.exp, high: o.high != null ? o.high : o.exp };
+    if (!Object.keys(ip.months[ym]).length) delete ip.months[ym];
+    return { ok: true };
+  }
+
+  /* ---------- personal budget: obligation + spend budget + remainder → savings ---------- */
+  function budgetRemainder(L, ym, today) {
+    today = today || C.todayISO();
+    var bs = C.budgetStatus(L, ym, today), limit = L.budgetPlan && L.budgetPlan.total || 0;
+    var sw = (L.budgetSweeps || {})[ym] || null, tx = sw ? byId(L.transactions, sw.txId) : null;
+    if (tx && tx.status === 'void') { sw = null; tx = null; }
+    var last = C.lastDay(ym);
+    return { ym: ym, limit: limit, spent: bs.total.spent, remainder: Math.max(0, limit - bs.total.spent), over: Math.max(0, bs.total.spent - limit),
+      swept: !!tx, sweptAmount: tx ? tx.amount : 0, ended: today >= last, due: today >= C.addDays(last, -2) && !tx, lastDay: last };
+  }
+  function sweepBudget(L, ym, fromId, toId, today, amount) {
+    var r = budgetRemainder(L, ym, today);
+    if (r.swept) return { ok: false, duplicate: true, errors: ['alreadySwept'] };
+    var amt = amount != null ? amount : r.remainder;
+    if (!(amt > 0)) return { ok: false, errors: ['nothingLeft'] };
+    var date = (today < r.lastDay ? today : r.lastDay) + 'T23:00';
+    var res = C.addTx(L, { type: 'savings_topup', amount: amt, fromAccountId: fromId, toAccountId: toId, date: date, opKey: 'sweep:' + ym, note: 'Остаток личного бюджета ' + ym + ' → накопления', budgetMonth: ym });
+    if (!res.ok) return res;
+    L.budgetSweeps = L.budgetSweeps || {}; L.budgetSweeps[ym] = { txId: res.tx.id, amount: amt };
+    return { ok: true, tx: res.tx };
+  }
+
+  /* ---------- expense summaries (actual records) ---------- */
+  function expenseSummary(L, from, to) {
+    var sp = C.spendByCategory(L, from, to), top = {};
+    Object.keys(sp).forEach(function (id) { var c = byId(L.categories, id), t = c && c.parent ? c.parent : id; top[t] = (top[t] || 0) + sp[id]; });
+    var f = C.flows(L, from, to);
+    var cats = Object.keys(top).map(function (id) { return { id: id, value: top[id] }; }).sort(function (a, b) { return b.value - a.value; });
+    var consumer = sum(cats, function (c) { return c.value; });
+    return { from: from, to: to, categories: cats, consumer: consumer, debtPrincipal: f.principal, finance: f.finance, family: f.family,
+      total: consumer + f.principal + f.finance + f.family, earned: f.earned };
+  }
+  function quarterRange(ym) { var y = +ym.slice(0, 4), q = Math.floor((+ym.slice(5, 7) - 1) / 3); return { from: y + '-' + pad(q * 3 + 1) + '-01', to: C.lastDay(y + '-' + pad(q * 3 + 3)), label: 'Q' + (q + 1) + ' ' + y, q: q + 1, y: y }; }
+
+  /* ---------- goals: templates & stages ---------- */
+  var GOAL_TEMPLATES = [
+    { id: 'emergency', ru: 'Резервный фонд', en: 'Emergency fund', type: 'reserve', target: 500000, color: '#FF9F0A', icon: 'shield', hint: { ru: '3–6 месячных обязательных расходов', en: '3–6 months of essential costs' } },
+    { id: 'vacation', ru: 'Отпуск', en: 'Vacation', type: 'custom', target: 600000, color: '#64D2FF', icon: 'globe', hint: { ru: 'Билеты, жильё, питание, запас 10%', en: 'Tickets, stay, food, 10% buffer' } },
+    { id: 'trip_home', ru: 'Поездка домой', en: 'Trip home', type: 'custom', target: 300000, color: '#5E5CE6', icon: 'globe', hint: { ru: 'Билеты и подарки родным', en: 'Tickets and gifts' } },
+    { id: 'car', ru: 'Машина', en: 'Car', type: 'custom', target: 3000000, color: '#30D158', icon: 'car', hint: { ru: 'Первый взнос + страховка + регистрация', en: 'Down payment + insurance + registration' } },
+    { id: 'wedding', ru: 'Свадьба', en: 'Wedding', type: 'custom', target: 4000000, color: '#FF375F', icon: 'heart', hint: { ru: 'Разбей на зал, одежду, подарки, поездку', en: 'Split into venue, clothes, gifts, trip' } },
+    { id: 'education', ru: 'Обучение / курс', en: 'Education / course', type: 'custom', target: 500000, color: '#AC8E68', icon: 'book', hint: { ru: 'Инвестиция в доход — считай окупаемость', en: 'An investment in income — estimate payback' } },
+    { id: 'gadget', ru: 'Техника', en: 'Gadget', type: 'custom', target: 400000, color: '#8E8E93', icon: 'laptop', hint: { ru: 'Копи заранее, без рассрочки', en: 'Save first, no instalments' } },
+    { id: 'home', ru: 'Жильё / первый взнос', en: 'Home / down payment', type: 'apartment', target: 10000000, color: '#BF5AF2', icon: 'home', hint: { ru: 'Долгая цель — разбей на этапы', en: 'Long goal — split into stages' } },
+    { id: 'debt_free', ru: 'Жизнь без долгов', en: 'Debt-free', type: 'short_debt', target: 0, color: '#FF453A', icon: 'target', hint: { ru: 'Сумма = текущий краткосрочный долг', en: 'Amount = current short-term debt' } },
+    { id: 'invest_start', ru: 'Стартовый капитал для инвестиций', en: 'Investing starter capital', type: 'custom', target: 1000000, color: '#0A84FF', icon: 'invest', hint: { ru: 'Только после резерва и без долгов под проценты', en: 'Only after the reserve and no interest-bearing debt' } }
+  ];
+  var BUDGET_TEMPLATES = [
+    { id: 'b503020', ru: '50/30/20', en: '50/30/20', split: { needs: .5, wants: .3, save: .2 } },
+    { id: 'b702010', ru: '70/20/10 (при долгах)', en: '70/20/10 (with debts)', split: { needs: .7, wants: .1, save: .2 } },
+    { id: 'zero', ru: 'Бюджет с нуля (каждый дирхам распределён)', en: 'Zero-based', split: null }
+  ];
+  function goalStage(pct) {
+    if (pct == null || isNaN(pct)) pct = 0;
+    if (pct >= 1) return { id: 'done', ru: 'Цель достигнута', en: 'Achieved' };
+    if (pct >= .75) return { id: 'final', ru: 'Финишная прямая', en: 'Final stretch' };
+    if (pct >= .5) return { id: 'half', ru: 'Больше половины', en: 'Past halfway' };
+    if (pct >= .25) return { id: 'momentum', ru: 'Набираю обороты', en: 'Building momentum' };
+    if (pct > 0) return { id: 'started', ru: 'Первые шаги', en: 'First steps' };
+    return { id: 'start', ru: 'Старт', en: 'Start' };
+  }
+
+  /* ---------- daily quote (real, verifiable attributions; tips are unattributed) ---------- */
+  var QUOTES = [
+    { ru: 'Цена — это то, что ты платишь. Ценность — то, что ты получаешь.', a: 'Уоррен Баффетт со ссылкой на Бенджамина Грэма, письмо акционерам Berkshire Hathaway за 2008 год' },
+    { ru: 'Остерегайся мелких расходов: маленькая течь потопит большой корабль.', a: 'Бенджамин Франклин, «Путь к богатству» (1758)' },
+    { ru: 'Покупай то, что тебе не нужно, — и скоро продашь то, что необходимо.', a: 'Бенджамин Франклин, «Путь к богатству» (1758)' },
+    { ru: 'Лучше лечь спать без ужина, чем проснуться в долгах.', a: 'Бенджамин Франклин, «Путь к богатству» (1758)' },
+    { ru: 'Годовой доход двадцать фунтов, годовой расход девятнадцать фунтов девятнадцать шиллингов и шесть пенсов — итог: счастье. Годовой доход двадцать фунтов, годовой расход двадцать фунтов и шесть пенсов — итог: несчастье.', a: 'Чарльз Диккенс, «Дэвид Копперфилд» (мистер Микобер)' },
+    { ru: 'Главная проблема инвестора — и даже его злейший враг — скорее всего, он сам.', a: 'Бенджамин Грэм, «Разумный инвестор»' },
+    { ru: 'Не ищи иголку в стоге сена. Просто купи весь стог.', a: 'Джон Богл, «The Little Book of Common Sense Investing»' },
+    { ru: 'Заработать деньги — одно. Удержать их — совсем другое.', a: 'Морган Хаусел, «Психология денег»' },
+    { ru: 'Богатство — это то, чего не видно: машины, которые не купили, часы, от которых отказались.', a: 'Морган Хаусел, «Психология денег» (пересказ)' },
+    { ru: 'Сначала заплати себе: часть каждого дохода — в накопления, до любых трат.', a: 'Совет дня' },
+    { ru: 'Кредитный лимит — это не твои деньги, а чужие деньги под процент.', a: 'Совет дня' },
+    { ru: 'Покупка дороже 200 AED, которая не нужна сегодня, подождёт 24 часа.', a: 'Совет дня' },
+    { ru: 'Самый дорогой долг закрывай первым — это гарантированная «доходность», равная его ставке.', a: 'Совет дня' },
+    { ru: 'Комиссия 10% за месяц — это больше 100% годовых. Считай стоимость денег в годовых.', a: 'Совет дня' },
+    { ru: 'Бюджет — это не запреты, а решение заранее, куда пойдут деньги.', a: 'Совет дня' },
+    { ru: 'Резерв на чёрный день превращает кризис в неудобство.', a: 'Совет дня' },
+    { ru: 'Записывай каждую трату неделю — и ты увидишь, где утекают деньги.', a: 'Совет дня' },
+    { ru: 'Остаток бюджета в конце месяца — не «можно потратить», а «уже накоплено».', a: 'Совет дня' }
+  ];
+  function quoteOfDay(dateISO) { var d = parseD(dateISO), n = Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000); return QUOTES[((n % QUOTES.length) + QUOTES.length) % QUOTES.length]; }
+
+  /* ---------- academy schedule & gamification ---------- */
+  function weekdayOf(iso) { return (parseD(iso).getDay() + 6) % 7; } // 0 = Monday … 6 = Sunday
+  function academyDay(startISO, todayISO) {
+    var idx = Math.max(0, C.diffDays(startISO, todayISO)), wd = weekdayOf(todayISO);
+    return { dayIndex: idx, week: Math.floor(idx / 7) + 1, dayInWeek: idx % 7 + 1, weekday: wd, assignmentDay: wd === 0 || wd === 1, assignmentSlot: wd === 0 ? 1 : wd === 1 ? 2 : null };
+  }
+  function academyStreak(doneDates, todayISO) {
+    var set = {}; (doneDates || []).forEach(function (d) { set[d] = 1; });
+    var d = set[todayISO] ? todayISO : C.addDays(todayISO, -1), n = 0;
+    while (set[d]) { n++; d = C.addDays(d, -1); }
+    return n;
+  }
+  var XP_LEVELS = [0, 100, 250, 450, 700, 1000, 1400, 1900, 2500, 3200, 4000];
+  function academyRank(xp) {
+    var i = 0; while (i + 1 < XP_LEVELS.length && xp >= XP_LEVELS[i + 1]) i++;
+    var next = XP_LEVELS[i + 1] || null;
+    return { rank: i + 1, xp: xp, from: XP_LEVELS[i], next: next, pct: next ? (xp - XP_LEVELS[i]) / (next - XP_LEVELS[i]) : 1 };
+  }
+  /* assignment slot 1 = Monday, 2 = Tuesday: open once that weekday has come on/after the day the week was reached */
+  function academyTaskOpen(reachedISO, todayISO, slot) {
+    if (!reachedISO || todayISO < reachedISO) return false;
+    var need = slot === 1 ? 0 : 1, wd = weekdayOf(reachedISO), wait = (need - wd + 7) % 7;
+    return C.diffDays(reachedISO, todayISO) >= wait;
+  }
+  function lessonXP(correct, total) { return 10 + 5 * (correct || 0) + (total && correct === total ? 5 : 0); }
+
+  return { spaceOf: spaceOf, spaceView: spaceView, portfolio: portfolio, convert: convert, debtRing: debtRing,
+    ensureIncomePlan: ensureIncomePlan, incomeMonth: incomeMonth, incomePlanView: incomePlanView, setIncomeActual: setIncomeActual, setIncomeExpected: setIncomeExpected,
+    budgetRemainder: budgetRemainder, sweepBudget: sweepBudget, expenseSummary: expenseSummary, quarterRange: quarterRange,
+    GOAL_TEMPLATES: GOAL_TEMPLATES, BUDGET_TEMPLATES: BUDGET_TEMPLATES, goalStage: goalStage, QUOTES: QUOTES, quoteOfDay: quoteOfDay,
+    weekdayOf: weekdayOf, academyDay: academyDay, academyStreak: academyStreak, academyRank: academyRank, academyTaskOpen: academyTaskOpen, lessonXP: lessonXP, XP_LEVELS: XP_LEVELS };
 });
 
 </script>
@@ -1658,6 +1983,29 @@ input[type=checkbox].sw:checked::after{left:22px}
     REG[o.id] = { type: 'donut', items: items, total: total, fmt: o.fmtTip, center: o.center };
     return '<div class="chart" data-chart="' + o.id + '" style="display:grid;place-items:center">' + svg + '<div class="ring-c" style="position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;text-align:center"><div><div class="small muted dc-l">' + esc(o.centerLabel || '') + '</div><div class="b dc-v" style="font-size:18px">' + esc(o.center || '') + '</div></div></div></div>';
   }
+  /* multi-ring chart: o.rings = [{w, items:[{v,color,label,info,pctLabel}]}] outer first; tap a slice → o.id info box */
+  function rings(o) {
+    var size = o.size || 180, cx = size / 2, gap = o.gap || 4, rIdx = 0, svg = '<svg viewBox="0 0 ' + size + ' ' + size + '" width="' + size + '" height="' + size + '" style="max-width:100%;overflow:visible">';
+    var outerR = size / 2 - (o.pad || 4), segs = [];
+    o.rings.forEach(function (rg, ri) {
+      var w = rg.w || 16, r = outerR - w / 2, c = 2 * Math.PI * r, items = rg.items.filter(function (i) { return i.v > 0; }), total = items.reduce(function (s, i) { return s + i.v; }, 0), off = 0;
+      svg += '<circle cx="' + cx + '" cy="' + cx + '" r="' + r + '" fill="none" stroke="var(--card2)" stroke-width="' + w + '"/>';
+      items.forEach(function (it) {
+        var len = total ? it.v / total * c : 0, k = segs.length, sp = items.length > 1 ? Math.min(2, len / 3) : 0;
+        segs.push(it);
+        svg += '<circle data-rseg="' + k + '" cx="' + cx + '" cy="' + cx + '" r="' + r + '" fill="none" stroke="' + it.color + '" stroke-width="' + w + '" stroke-dasharray="' + Math.max(0, len - sp) + ' ' + (c - len + sp) + '" stroke-dashoffset="' + (-off) + '" transform="rotate(-90 ' + cx + ' ' + cx + ')" style="cursor:pointer"/>';
+        if (rg.labels && it.pctLabel && len > 18) {
+          var ang = ((off + len / 2) / c) * 2 * Math.PI - Math.PI / 2, lx = cx + Math.cos(ang) * r, ly = cx + Math.sin(ang) * r;
+          svg += '<text x="' + lx.toFixed(1) + '" y="' + (ly + 3.5).toFixed(1) + '" text-anchor="middle" font-size="' + (rg.labelSize || 10) + '" font-weight="700" fill="#fff" style="pointer-events:none;paint-order:stroke;stroke:rgba(0,0,0,.35);stroke-width:2px">' + esc(it.pctLabel) + '</text>';
+        }
+        off += len;
+      });
+      outerR -= w + gap; rIdx++;
+    });
+    svg += '</svg>';
+    REG[o.id] = { type: 'rings', segs: segs };
+    return '<div class="chart rings" data-chart="' + o.id + '" style="width:' + size + 'px;height:' + size + 'px;position:relative;flex:none">' + svg + '<div class="ring-c" style="position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;text-align:center">' + (o.centerHtml || '') + '</div></div>';
+  }
   function ring(pct, color, size, inner) {
     size = size || 64; var r = size / 2 - 5, c = 2 * Math.PI * r, p = Math.max(0, Math.min(1, pct || 0));
     return '<div class="ring" style="width:' + size + 'px;height:' + size + 'px"><svg viewBox="0 0 ' + size + ' ' + size + '" width="' + size + '" height="' + size + '"><circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" fill="none" stroke="var(--card2)" stroke-width="7"/><circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" fill="none" stroke="' + color + '" stroke-width="7" stroke-linecap="round" stroke-dasharray="' + (c * p) + ' ' + c + '" transform="rotate(-90 ' + size / 2 + ' ' + size / 2 + ')"/></svg><div class="in">' + (inner || '') + '</div></div>';
@@ -1678,6 +2026,13 @@ input[type=checkbox].sw:checked::after{left:22px}
       var gi = Math.max(0, Math.min(R.groups.length - 1, Math.floor(px / R.gw))), gr = R.groups[gi];
       left = (gi + .5) * R.gw / R.W * rect.width;
       html = '<b>' + esc(gr.tip || gr.label) + '</b>' + gr.values.map(function (v) { return '<br><span style="color:' + v.color + '">●</span> ' + esc(v.name || '') + ' ' + esc(R.fmt ? R.fmt(v.v) : v.v); }).join('');
+    } else if (R.type === 'rings') {
+      var rs = ev.target.getAttribute && ev.target.getAttribute('data-rseg');
+      if (rs == null) return;
+      var sg = R.segs[+rs], box = document.getElementById(el.getAttribute('data-chart') + '-info');
+      el.querySelectorAll('[data-rseg]').forEach(function (c) { c.style.opacity = c === ev.target ? 1 : .45; });
+      if (box && sg.info) { box.innerHTML = sg.info; box.classList.remove('hidden'); }
+      return;
     } else if (R.type === 'donut') {
       var seg = ev.target.getAttribute && ev.target.getAttribute('data-seg');
       if (seg == null) return;
@@ -1697,11 +2052,11 @@ input[type=checkbox].sw:checked::after{left:22px}
     var cur = el.querySelector('.cursor'); if (cur) cur.setAttribute('opacity', '0');
   }
   if (typeof document !== 'undefined') {
-    document.addEventListener('pointermove', function (e) { if (e.pointerType === 'mouse') handle(e); });
+    document.addEventListener('pointermove', function (e) { if (e.pointerType === 'mouse' && !(e.target.closest && e.target.closest('.chart.rings'))) handle(e); });
     document.addEventListener('pointerdown', handle);
     document.addEventListener('pointerout', function (e) { if (e.pointerType === 'mouse' && e.target.closest && e.target.closest('.chart') && !(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.chart') === e.target.closest('.chart'))) leave(e); });
   }
-  g.AFCharts = { line: line, bars: bars, donut: donut, ring: ring, REG: REG };
+  g.AFCharts = { line: line, bars: bars, donut: donut, ring: ring, rings: rings, REG: REG };
 })(typeof self !== 'undefined' ? self : this);
 
 </script>
@@ -3304,7 +3659,7 @@ input[type=checkbox].sw:checked::after{left:22px}
       row('download', '#0A84FF', T('Данные, импорт и резервные копии', 'Data, import & backups'), T('JSON, CSV, снимки', 'JSON, CSV, snapshots'), go('data')) +
       row('edit', '#8E8E93', T('Журнал изменений', 'Change log'), (L.changelog || []).length + T(' записей', ' entries'), go('changelog')) +
       row('settings', '#8E8E93', T('Настройки', 'Settings'), (App.lang() === 'en' ? 'English' : 'Русский') + ' · ' + T({ dark: 'тёмная', light: 'светлая', auto: 'авто' }[L.settings.theme] || 'тёмная', L.settings.theme), go('settings')) +
-      row('info', '#8E8E93', T('О приложении и ограничения', 'About & limitations'), 'Akbar Finance 3.0', go('about')) + '</div>';
+      row('info', '#8E8E93', T('О приложении и ограничения', 'About & limitations'), 'Akbar Finance 3.0 · v3.1', go('about')) + '</div>';
     return { title: T('Ещё', 'More'), html: h };
   };
 
@@ -3491,7 +3846,7 @@ input[type=checkbox].sw:checked::after{left:22px}
   /* ---------- about & limitations ---------- */
   App.screens.about = function () {
     var li = function (a) { return '<li>' + a + '</li>'; };
-    var h = '<div class="card"><div class="b">Akbar Finance 3.0</div><div class="small muted mt8">' + T('Личное приложение учёта финансов. Интерфейс вдохновлён структурой Wallet by BudgetBakers, собственная реализация без чужих логотипов и ресурсов.', 'Personal finance ledger. Interface inspired by the Wallet by BudgetBakers layout; own implementation, no third-party logos or assets.') + '</div></div>';
+    var h = '<div class="card"><div class="b">Akbar Finance 3.0 · v3.1</div><div class="small muted mt8">' + T('Личное приложение учёта финансов. Интерфейс вдохновлён структурой Wallet by BudgetBakers, собственная реализация без чужих логотипов и ресурсов.', 'Personal finance ledger. Interface inspired by the Wallet by BudgetBakers layout; own implementation, no third-party logos or assets.') + '</div></div>';
     h += '<div class="card"><div class="card-h"><span class="t">' + T('Честные ограничения', 'Honest limitations') + '</span></div><ul class="small ul">' +
       li(T('Нет облачной синхронизации и аккаунтов. Данные — только в этом браузере на этом устройстве.', 'No cloud sync or accounts. Data stays in this browser on this device.')) +
       li(T('Перенос между iPhone и Windows — вручную через экспорт/импорт JSON.', 'Moving between iPhone and Windows is manual via JSON export/import.')) +
@@ -3506,6 +3861,1320 @@ input[type=checkbox].sw:checked::after{left:22px}
     h += '<div class="small muted center">' + T('Хранилище: ', 'Storage: ') + esc(AFDB.mode()) + ' · ' + (window.AF_STANDALONE ? T('автономный файл', 'standalone file') : location.protocol.replace(':', '')) + '</div>';
     return { title: T('О приложении', 'About'), html: h };
   };
+})();
+
+</script>
+<script>
+/* Akbar Finance 3.1 — v3 dashboard (Личное/Бизнес, All finance ring, debt ring), income year plan, personal budget sweep,
+   credit/card create & close flow, rates editor, goal templates, expense summaries. Loaded after the 3.0 screens. */
+(function () {
+  'use strict';
+  var App = window.App, C = App.C, I = App.I, CH = App.CH, S = App.S, T = App.T, F = App.F, esc = App.esc;
+  var ACC_COLORS = ['#0A84FF', '#30D158', '#FF9F0A', '#FF453A', '#BF5AF2', '#64D2FF', '#FF375F', '#5E5CE6', '#12A07A', '#E5484D', '#AC8E68', '#8E8E93'];
+
+  /* ---------- spaces ---------- */
+  App.space = function () { return App.prefs.space === 'business' ? 'business' : 'personal'; };
+  App.V = function () { return C.spaceView(S.L, App.space()); };
+  App.actions.setSpace = function (el) { App.prefs.space = el.dataset.v; App.savePrefs(); App.render(); };
+  App.spaceSeg = function () {
+    return '<div class="seg space-seg"><button class="' + (App.space() === 'personal' ? 'on' : '') + '" data-a="setSpace" data-v="personal">' + T('Личное', 'Personal') + '</button><button class="' + (App.space() === 'business' ? 'on' : '') + '" data-a="setSpace" data-v="business">' + T('Бизнес', 'Business') + '</button></div>';
+  };
+
+  /* ---------- collapsible sections ---------- */
+  App.isCollapsed = function (k) { return !!(App.prefs.collapsed || {})[k]; };
+  App.actions.secToggle = function (el) { var k = el.dataset.k; App.prefs.collapsed = App.prefs.collapsed || {}; App.prefs.collapsed[k] = !App.prefs.collapsed[k]; App.savePrefs(); App.render(); };
+  function sec(k, title, body, right) {
+    var col = App.isCollapsed(k);
+    return '<section class="v3sec' + (col ? ' col' : '') + '"><div class="v3sec-h"><button class="v3sec-t" data-a="secToggle" data-k="' + k + '" aria-expanded="' + (!col) + '">' + I('down', 'sm') + '<span>' + esc(title) + '</span></button>' + (right || '') + '</div>' + (col ? '' : '<div class="v3sec-b">' + body + '</div>') + '</section>';
+  }
+  App.sec = sec;
+  function more(screen, extra) { return '<button class="more" data-a="go" data-s="' + screen + '"' + (extra || '') + '>' + T('Все', 'All') + I('chev', 'sm') + '</button>'; }
+
+  /* ---------- rates ---------- */
+  App.uzsPerAed = function (L) { var r = (L || S.L).rates.UZS; return r ? 1 / r : null; };
+  App.rateCaption = function (L) {
+    L = L || S.L; var d = L.rateDates || {}, u = App.uzsPerAed(L), dt = d.UZS || d.USD;
+    return T('курс на ', 'rate as of ') + (dt ? App.fd(dt, true) : '—') + T(', вручную', ', manual') + '<br>1&nbsp;USD = ' + esc(String(L.rates.USD || '—').replace('.', ',')) + '&nbsp;AED' + (u ? '<br>1&nbsp;AED = ' + esc(C.fmt(Math.round(u * 100), { lang: App.lang(), cur: 'UZS' })).replace(/\s/g, '&nbsp;') : '');
+  };
+  function conv(L, v, cur) { var x = C.convert(L, v, cur); return x == null ? '—' : F(x, cur, { dec: cur === 'UZS' ? 0 : 2 }); }
+
+  /* ---------- context for academy & lessons (real numbers, computed at runtime) ---------- */
+  App.finCtx = function () {
+    var L = S.L, V = C.spaceView(L, 'personal'), m = C.metrics(V, S.today), ds = C.debtSummary(V, S.today);
+    var nextYm = C.addMonths(C.ymOf(S.today), 1), mp = C.monthPlan(V, nextYm, { today: S.today });
+    var ip = C.incomeMonth(L, nextYm), sal = ip.lines.filter(function (l) { return l.type === 'salary'; })[0];
+    var salary = sal ? sal.exp : mp.income, low = sal ? sal.low : salary;
+    var debtPay = 0; mp.items.forEach(function (it) { if (it.kind === 'payment') debtPay += -it.amount; });
+    var bs = C.budgetStatus(V, C.ymOf(S.today), S.today);
+    var f = function (v) { return F(v); };
+    return { own: f(m.own), debt: f(ds.total), short: f(ds.short), long: f(ds.long), shortPct: App.pct(ds.total ? ds.short / ds.total : 0), netWorth: f(m.netWorth),
+      salary: f(salary), salaryLow: f(low), s50: f(Math.round(salary * .5)), s30: f(Math.round(salary * .3)), s20: f(Math.round(salary * .2)),
+      nextIncome: f(mp.income), nextOut: f(mp.out), nextResult: App.FS(mp.result), budget: f(L.budgetPlan.total || 0), budgetSpent: f(bs.total.spent),
+      saved: f(m.reserved + m.savings), dti: App.pct(mp.income ? debtPay / mp.income : 0) };
+  };
+  App.fillCtx = function (s, ctx) { return String(s).replace(/\{(\w+)\}/g, function (m0, k) { return ctx[k] != null ? ctx[k] : m0; }); };
+
+  /* active budget month: the current month while it still has open planned payments, otherwise the next one
+     (end-of-month salary funds the next month) */
+  App.activeBudgetMonth = function (V) {
+    var ym = C.ymOf(S.today), open = V.planned.some(function (p) { return p.budgetMonth === ym && (p.kind === 'payment' || p.kind === 'family') && C.plannedIncluded(p) && C.plannedState(V, p, S.today).open; });
+    return open ? ym : C.addMonths(ym, 1);
+  };
+  /* ---------- dashboard v3 ---------- */
+  App.screens.home = function () {
+    var L = S.L, V = App.V(), sp = App.space(), m = C.metrics(V, S.today), bal = m.balances;
+    var h = App.spaceSeg();
+    var own = V.accounts.filter(function (a) { return !C.isLiab(a) && !a.archived && !a.closed; });
+    var liabs = V.accounts.filter(function (a) { return C.isLiab(a) && !a.archived && !a.closed; });
+    if (sp === 'business' && !V.accounts.length) {
+      h += '<div class="card v3empty">' + I('briefcase') + '<div class="b">' + T('Бизнес — отдельное пространство', 'Business is a separate space') + '</div><div class="small muted">' + T('Свои счета, записи и итоги. Личные деньги и долги сюда не попадают — и наоборот.', 'Its own accounts, records and totals. Personal money and debt stay out — and vice versa.') + '</div>' +
+        '<button class="btn" data-a="modal" data-m="account" data-space="business">' + I('plus') + T('Создать бизнес-счёт', 'Create a business account') + '</button></div>';
+      return { title: T('Главная', 'Dashboard'), html: h };
+    }
+    if (m.unconvertible.length) h += '<div class="alert warn">' + I('alert') + '<div class="grow">' + T('Нет курса для: ', 'No rate for: ') + esc(m.unconvertible.join(', ')) + '. <a href="#" data-a="go" data-s="currencies">' + T('Указать курс', 'Set rate') + '</a></div></div>';
+    // 1. portfolio: All finance
+    var pf = C.portfolio(V, S.today);
+    var segs = pf.segments.map(function (s) { return { v: s.value, color: s.color, info: '<b>' + esc(s.name) + '</b> · ' + App.pct(s.pct) + '<br>' + esc(F(s.value)) + (pf.mode === 'debt' ? ' · ' + (s.term === 'long' ? T('долгосрочный', 'long-term') : T('краткосрочный', 'short-term')) : '') }; });
+    var netCls = pf.net < 0 ? 'neg' : 'pos';
+    var center = '<div><div class="rc-k">All finance</div><div class="rc-v num ' + netCls + '">' + esc(F(pf.net, 'AED', { dec: Math.abs(pf.net) >= 10000000 ? 0 : 2 }).replace(/\s?AED$/, '')) + '</div><div class="rc-u">AED</div></div>';
+    h += '<div class="v3top"><div class="card v3pf"><div class="v3ring-row">' + CH.rings({ id: 'pfRing', size: 168, rings: [{ w: 16, items: segs.length ? segs : [{ v: 1, color: 'var(--card2)' }] }], centerHtml: center }) +
+      '<div class="v3side"><div class="v3lbl">' + T('Общий баланс', 'Total balance') + '</div><div class="v3big num ' + netCls + '">' + esc(F(pf.net).replace(/\s?AED$/, '')) + ' <small>AED</small></div>' +
+      '<div class="small muted num">≈ ' + esc(conv(V, pf.net, 'USD')) + '<br>≈ ' + esc(conv(V, pf.net, 'UZS')) + '</div>' +
+      (pf.debt ? '<div class="small b mt8">' + T('Краткосрочные ', 'Short-term ') + App.pct(pf.shortPct) + '<br>' + T('Долгосрочные ', 'Long-term ') + App.pct(pf.longPct) + '</div>' : '') +
+      '<button class="v3rate" data-a="go" data-s="currencies">' + App.rateCaption(V) + '</button></div></div>' +
+      '<div id="pfRing-info" class="ring-info hidden"></div>' +
+      '<div class="tiny muted mt8">' + (pf.mode === 'debt' ? T('Баланс отрицательный: кольцо показывает доли кредиторов в долге. Нажми на сегмент.', 'Balance is negative: the ring shows each creditor\'s share of debt. Tap a segment.') : T('Кольцо — доли счетов в собственных средствах. Нажми на сегмент.', 'The ring shows each account\'s share of own money. Tap a segment.')) + ' ' + T('Общий баланс = собственные средства − все долги.', 'Total balance = own money − all debt.') + '</div>' +
+      '<div class="v3legend">' + pf.segments.map(function (s) { return '<div class="leg"><i style="background:' + s.color + '"></i><span class="leg-n ellipsis">' + esc(s.name) + '</span><span class="leg-p num">' + App.pct(s.pct) + '</span><span class="leg-v num">' + esc(F(s.value)) + '</span></div>'; }).join('') + '</div></div>';
+    // 2. debt ring
+    var dr = C.debtRing(V, S.today);
+    if (dr.total > 0) {
+      var outer = [{ v: dr.short, color: '#FF9F0A', pctLabel: App.pct(dr.shortPct), info: '<b>' + T('Краткосрочные', 'Short-term') + '</b> · ' + App.pct(dr.shortPct) + '<br>' + esc(F(dr.short)) }, { v: dr.long, color: '#FF453A', pctLabel: App.pct(dr.longPct), info: '<b>' + T('Долгосрочные', 'Long-term') + '</b> · ' + App.pct(dr.longPct) + '<br>' + esc(F(dr.long)) }];
+      var inner = dr.inner.map(function (r) { return { v: r.value, color: r.color, info: '<b>' + esc(r.name) + '</b> · ' + App.pct(r.pct) + T(' долга', ' of debt') + '<br>' + T('Долг ', 'Debt ') + esc(F(r.value)) + '<br>' + (r.next ? T('Следующий платёж: ', 'Next payment: ') + esc(F(r.next.amount)) + T(' до ', ' by ') + esc(App.fd(r.next.date, true)) : T('Платёж не запланирован', 'No payment planned')) }; });
+      var dc = '<div><div class="rc-k">' + T('100% долга', '100% of debt') + '</div><div class="rc-v num neg">' + esc(F(-dr.total, 'AED', { dec: 0 }).replace(/\s?AED$/, '')) + '</div><div class="rc-u">' + T('погашено ', 'repaid ') + App.pct(dr.repaidPct, 0) + '</div></div>';
+      h += sec('debt', T('Долг', 'Debt'), '<div class="card v3debt"><div class="v3ring-row">' + CH.rings({ id: 'debtRing', size: 176, gap: 3, rings: [{ w: 20, items: outer, labels: true, labelSize: 10 }, { w: 12, items: inner }], centerHtml: dc }) +
+        '<div class="v3boxes"><div class="box"><div class="p" style="color:#FF9F0A">' + App.pct(dr.shortPct) + '</div><div class="l">' + T('Краткосрочные', 'Short-term') + '<br><span class="num">' + esc(F(dr.short)) + '</span></div></div><div class="box"><div class="p" style="color:#FF453A">' + App.pct(dr.longPct) + '</div><div class="l">' + T('Долгосрочные', 'Long-term') + '<br><span class="num">' + esc(F(dr.long)) + '</span></div></div></div></div>' +
+        '<div id="debtRing-info" class="ring-info hidden"></div><div class="tiny muted mt8">' + T('Внешнее кольцо — краткосрочные и долгосрочные (100%). Внутреннее — кредиторы. Нажми на сегмент: сумма и следующий платёж.', 'Outer ring: short vs long-term (100%). Inner ring: creditors. Tap a segment for amount and next payment.') + '</div></div>',
+        '<button class="more" data-a="go" data-s="debts">Debt Freedom' + I('chev', 'sm') + '</button>');
+    }
+    h += '</div>';
+    // warnings (top 2)
+    var notes = C.notifications(V, S.today).filter(function (n) { return !n.dismissed && (n.level === 'danger' || n.level === 'warn'); });
+    if (notes.length) h += notes.slice(0, 2).map(App.noteHtml).join('') + (notes.length > 2 ? '<button class="linkbtn" data-a="go" data-s="notifications">' + T('Ещё предупреждения: ', 'More warnings: ') + (notes.length - 2) + '</button>' : '');
+    // KPI strip
+    var bym = App.activeBudgetMonth(V), mp = C.monthPlan(V, bym, { today: S.today, scenarios: S.ui.scen.reborrow ? ['reborrow'] : [] });
+    h += '<div class="v3kpis">' + App.kpi(T('Собственные средства', 'Own money'), F(m.own), m.own < 0 ? 'neg' : '') + App.kpi(T('Обязательства · ', 'Obligations · ') + App.fymShort(bym), F(-mp.out), 'neg') + App.kpi(T('Итог месяца по плану', 'Month result (plan)'), App.FS(mp.result), mp.result < 0 ? 'neg' : 'pos') + App.kpi(T('Чистый капитал', 'Net worth'), F(m.netWorth), m.netWorth < 0 ? 'neg' : 'pos') + '</div>';
+    // quote of the day
+    var q = C.quoteOfDay(S.today);
+    if (!App.isCollapsed('quote')) h += '<div class="card v3quote"><span class="qmark">«</span><div class="grow"><p>' + esc(q.ru) + '</p><div class="who">' + esc(q.a) + '</div></div><button class="iconbtn sm" data-a="secToggle" data-k="quote" aria-label="hide">' + I('close', 'sm') + '</button></div>';
+    // obligations of the budget month (personal budget included)
+    if (sp === 'personal') h += sec('oblig', T('Обязательные · ', 'Obligations · ') + App.fym(bym).replace(/\s\d{4}$/, ''), obligations(V, mp, bym), more('monthplan'));
+    // personal budget envelope & remainder → savings
+    if (sp === 'personal' && (L.budgetPlan.total || 0) > 0) h += sec('budget', T('Личный бюджет', 'Personal budget'), budgetCard(V), more('budgets'));
+    // charts
+    h += sec('charts', T('Графики', 'Charts'), chartsCard(V, m));
+    // accounts
+    h += sec('accounts', T('Мои счета', 'My accounts'), '<div class="acc-grid">' + own.map(function (a) { return App.accTile(a, bal); }).join('') + '<button class="acc-tile add" data-a="modal" data-m="account" data-space="' + sp + '">' + I('plus', 'sm') + T('Счёт', 'Account') + '</button></div>', more('accounts'));
+    h += sec('credits', T('Кредиты и карты', 'Loans & cards'), '<div class="acc-grid">' + liabs.map(function (a) { return App.accTile(a, bal); }).join('') + '<button class="acc-tile add" data-a="modal" data-m="newCredit" data-space="' + sp + '">' + I('plus', 'sm') + T('Кредит / карта', 'Loan / card') + '</button></div>', '<button class="more" data-a="go" data-s="debts">Debt Freedom' + I('chev', 'sm') + '</button>');
+    // goals
+    var goals = (V.goals || []).map(function (g) { return C.goalStatus(L, g, S.today); });
+    h += sec('goals', T('Цели', 'Goals'), '<div class="v3goals">' + goals.slice(0, 6).map(goalCard).join('') + '<button class="gcard add" data-a="modal" data-m="goalTpl">' + I('plus') + '<span>' + T('Новая цель', 'New goal') + '</span></button></div>', more('goals'));
+    // academy teaser
+    if (sp === 'personal' && App.academyTeaser) h += App.academyTeaser();
+    // upcoming & recent
+    var up = C.upcoming(V, S.today, 21).slice(0, 6);
+    h += sec('upcoming', T('Ближайшие 3 недели', 'Next 3 weeks'), '<div class="list">' + (up.length ? up.map(function (x) { return App.plannedRow(x.p, x.st); }).join('') : '<div class="empty">' + T('Платежей нет', 'Nothing due') + '</div>') + '</div>', more('planned'));
+    var recent = App.sortTx(V.transactions).slice(0, 5);
+    h += sec('recent', T('Последние записи', 'Last records'), recent.length ? '<div class="list">' + recent.map(function (t) { return App.txRow(t); }).join('') + '</div>' : '<div class="list"><div class="empty">' + T('Записей пока нет. Нажми «+», чтобы добавить.', 'No records yet. Tap “+”.') + '</div></div>', more('records'));
+    return { title: T('Главная', 'Dashboard'), html: h };
+  };
+
+  function obligations(V, mp, ym) {
+    var rows = mp.items.filter(function (it) { return it.amount < 0; }).map(function (it) {
+      if (it.kind === 'personal') return '<div class="row"><span class="cat-ic" style="background:#FF9F0A">' + I('cart') + '</span><div class="main-t"><div class="t1">' + T('Личный бюджет', 'Personal budget') + '</div><div class="t2">' + T('потрачено ', 'spent ') + esc(F(it.actual)) + T(' · остаток в конце месяца → накопления (по подтверждению)', ' · month-end remainder → savings (on confirmation)') + '</div></div><div class="amt num">' + esc(F(it.amount)) + '</div></div>';
+      if (it.kind === 'unplannedOut') return '<div class="row"><span class="cat-ic" style="background:#8E8E93">' + I('receipt') + '</span><div class="main-t"><div class="t1">' + T('Внеплановые платежи', 'Unplanned payments') + '</div></div><div class="amt num">' + esc(F(it.amount)) + '</div></div>';
+      var a = it.accountId && App.acc(it.accountId);
+      return '<button class="row tap" data-a="modal" data-m="editPlanned" data-id="' + it.id + '"><span class="cat-ic" style="background:' + (a ? a.color : it.kind === 'family' ? 'var(--savings)' : 'var(--planned)') + '">' + I(a ? a.icon || 'card' : it.kind === 'family' ? 'family' : 'calendar') + '</span><div class="main-t"><div class="t1">' + esc(it.title) + (it.scenario ? ' <span class="tag">' + T('сценарий', 'scenario') + '</span>' : '') + '</div><div class="t2">' + esc(App.fd(it.date)) + ' · ' + App.pTag(it.status) + '</div></div><div class="amt num">' + esc(F(it.amount)) + '</div></button>';
+    });
+    var inc = mp.items.filter(function (it) { return it.amount > 0 && it.kind !== 'unplannedIn'; });
+    return '<div class="list">' + rows.join('') + '<div class="row total"><div class="main-t"><div class="t1">' + T('Итого обязательств', 'Total obligations') + '</div><div class="t2">' + T('поступления по плану ', 'planned inflows ') + esc(F(mp.income)) + (inc.some(function (i) { return i.kind === 'borrow'; }) ? T(' (включая займы — это не доход)', ' (incl. loans — not income)') : '') + '</div></div><div class="amt num neg">' + esc(F(-mp.out)) + '</div></div>' +
+      '<div class="row total"><div class="main-t"><div class="t1">' + T('Остаток по плану', 'Planned remainder') + '</div></div><div class="amt num ' + (mp.result < 0 ? 'neg' : 'pos') + '">' + esc(App.FS(mp.result)) + '</div></div></div>';
+  }
+
+  function budgetCard(V) {
+    var ym = C.ymOf(S.today), br = C.budgetRemainder(V, ym, S.today), prev = C.addMonths(ym, -1), bp = C.budgetRemainder(S.L, prev, S.today);
+    var pct = br.limit ? Math.min(1, br.spent / br.limit) : 0, h = '<div class="card">';
+    h += '<div class="split"><span class="small muted">' + esc(App.fym(ym)) + '</span><span class="num b">' + esc(F(br.spent)) + ' / ' + esc(F(br.limit)) + '</span></div><div class="bar mt8"><i style="width:' + pct * 100 + '%;background:' + (br.over ? 'var(--expense)' : 'var(--accent)') + '"></i></div>';
+    h += '<div class="split mt8 small"><span class="muted">' + (br.over ? T('Перерасход', 'Over budget') : T('Осталось', 'Left')) + '</span><span class="num ' + (br.over ? 'neg' : 'pos') + '">' + esc(F(br.over || br.remainder)) + '</span></div>';
+    var showSweep = function (r, label) { return '<div class="alert info mt8">' + I('piggy') + '<div class="grow">' + label + '</div><button class="act" data-a="modal" data-m="sweep" data-ym="' + r.ym + '">' + T('Перевести', 'Transfer') + '</button></div>'; };
+    if (bp.limit && bp.ended && !bp.swept && bp.remainder > 0 && prev >= C.ymOf(S.L.meta.asOf || S.today)) h += showSweep(bp, T('Остаток бюджета за ', 'Budget remainder for ') + esc(App.fym(prev)) + ': ' + esc(F(bp.remainder)) + T(' → в накопления?', ' → to savings?'));
+    if (br.swept) h += '<div class="tiny muted mt8">' + I('check', 'sm') + T(' Остаток переведён в накопления: ', ' Remainder moved to savings: ') + esc(F(br.sweptAmount)) + '</div>';
+    else if (br.due && br.remainder > 0) h += showSweep(br, T('Конец месяца: остаток ', 'Month end: remainder ') + esc(F(br.remainder)) + T(' → в накопления?', ' → to savings?'));
+    else h += '<div class="tiny muted mt8">' + T('В последние дни месяца здесь появится предложение перевести остаток в накопления. Перевод создаётся только после твоего подтверждения — автоматически приложение деньги не двигает.', 'In the last days of the month you will be offered to move the remainder to savings. The transfer is created only after you confirm — the app never moves money automatically.') + '</div>';
+    return h + '</div>';
+  }
+
+  function goalCard(gs) {
+    var g = gs.goal, st = C.goalStage(gs.pct);
+    return '<button class="gcard" data-a="go" data-s="goals"><div class="gt ellipsis2">' + esc(g.title) + '</div><div class="gp num" style="color:' + (g.color || 'var(--accent)') + '">' + App.pct(gs.pct, 0) + '</div><div class="gs">' + esc(T(st.ru, st.en)) + '</div><div class="bar thin"><i style="width:' + Math.min(100, gs.pct * 100) + '%;background:' + (g.color || 'var(--accent)') + '"></i></div></button>';
+  }
+
+  function chartsCard(V, m) {
+    var ym0 = C.ymOf(S.today), rows = C.planSeries(V, ym0, 6, { today: S.today, scenarios: S.ui.scen.reborrow ? ['reborrow'] : [] });
+    var bars = CH.bars({ id: 'v3flow', height: 150, groups: rows.map(function (r) { return { label: App.fymShort(r.ym), tip: App.fym(r.ym) + ' · ' + T('итог ', 'result ') + App.FS(r.result), values: [{ v: r.income, color: 'var(--income)', name: T('Поступления', 'Inflows') }, { v: r.out, color: 'var(--expense)', name: T('Обязательства', 'Obligations') }] }; }),
+      fmtTip: function (v) { return F(v); }, legend: [{ name: T('Поступления', 'Inflows'), color: 'var(--income)' }, { name: T('Обязательства', 'Obligations'), color: 'var(--expense)' }] });
+    // debt & net worth projection by plan (no new events assumed)
+    var proj = debtProjection(V, 12), pts = proj.map(function (p) { return { x: p.ym + '-01', y: -p.debt + m.own }; });
+    var line = CH.line({ id: 'v3nw', height: 150, zero: true, series: [{ name: T('Общий баланс по плану', 'Total balance by plan'), color: 'var(--accent)', fill: true, points: pts }], fmtTip: function (v) { return F(v); }, fmtX: function (d) { return App.fymShort(d.slice(0, 7)); } });
+    return '<div class="v3charts"><div class="card"><div class="card-h"><span class="t small">' + T('Денежный поток по бюджетным месяцам (план)', 'Cash flow by budget month (plan)') + '</span></div>' + bars + '</div>' +
+      '<div class="card"><div class="card-h"><span class="t small">' + T('Общий баланс: прогноз по плану платежей', 'Total balance: projection by payment plan') + '</span></div>' + line + '<div class="tiny muted mt8">' + T('Долг уменьшается на плановые погашения тела и растёт на плановые займы. Собственные средства взяты на сегодня — без будущих накоплений. Это ориентир, а не факт.', 'Debt drops by planned principal repayments and grows by planned borrowing. Own money is today\'s — future savings not included. An estimate, not a fact.') + '</div></div></div>';
+  }
+  function debtProjection(V, n) {
+    var ds = C.debtSummary(V, S.today), debt = ds.total, ym0 = C.ymOf(S.today), out = [], rows = V.planned.filter(function (p) { return C.plannedIncluded(p, { scenarios: S.ui.scen.reborrow ? ['reborrow'] : [] }); });
+    for (var i = 0; i < n; i++) {
+      var ym = C.addMonths(ym0, i);
+      rows.forEach(function (p) {
+        if (p.date.slice(0, 7) !== ym) return; var st = C.plannedState(V, p, S.today);
+        var a = p.accountId && C.byId(V.accounts, p.accountId); if (!a || !C.isLiab(a)) return;
+        if (p.kind === 'payment' && st.open) debt -= C.toBase(V, p.interestPart ? Math.round(st.remaining * (1 - p.interestPart / p.amount)) : st.remaining, p.currency) || 0;
+        if (p.kind === 'borrow' && !p.confirmed) debt += C.toBase(V, p.debtAmount || p.amount, p.currency) || 0;
+      });
+      out.push({ ym: ym, debt: Math.max(0, debt) });
+    }
+    return out;
+  }
+  App.debtProjection = debtProjection;
+})();
+
+</script>
+<script>
+/* Akbar Finance 3.1 — credits/cards create & close, budget sweep, goal templates, income year plan, rates, expense summaries */
+(function () {
+  'use strict';
+  var App = window.App, C = App.C, I = App.I, CH = App.CH, S = App.S, T = App.T, F = App.F, esc = App.esc;
+
+  /* ---------- new credit / card (pick type → account modal) ---------- */
+  App.modals.newCredit = function (m) {
+    var h = '<div class="list">' + [['credit_card', 'card', T('Кредитная карта', 'Credit card'), T('Лимит, выписка, минимальный платёж, срок', 'Limit, statement, minimum payment, due date')], ['loan', 'loan', T('Кредит / заём / рассрочка', 'Loan / instalments'), T('Сумма долга, ежемесячный платёж, срок', 'Balance, monthly payment, end date')]].map(function (x) {
+      return '<button class="row tap" data-a="newCreditPick" data-t="' + x[0] + '"><span class="cat-ic" style="background:var(--expense)">' + I(x[1]) + '</span><div class="main-t"><div class="t1">' + x[2] + '</div><div class="t2">' + x[3] + '</div></div>' + I('chev', 'sm') + '</button>';
+    }).join('') + '</div><div class="dashed-note">' + T('Новый кредит добавляет долг в общий баланс. Если деньги по нему пришли на твой счёт — запиши отдельно «Получение кредита», это не доход.', 'A new loan adds debt to the total balance. If its money reached your account, also record “Loan received” — it is not income.') + '</div>';
+    return { title: T('Новый кредит или карта', 'New loan or card'), html: h };
+  };
+  App.actions.newCreditPick = function (el) { var sp = S.modal.space; App.openModal('account', { type: el.dataset.t, space: sp }); };
+
+  /* account modal: add space selector (personal/business) */
+  var accModal = App.modals.account;
+  App.modals.account = function (m) {
+    var a = m.id ? App.acc(m.id) : null;
+    if (!m.inited) m.f.space = a ? (a.space || 'personal') : (m.space || App.space());
+    var out = accModal(m);
+    var spSel = '<div class="form"><div class="group">' + App.fld(T('Пространство', 'Space'), '<select class="in" data-ch="accSpace">' + App.opts([['personal', T('Личное', 'Personal')], ['business', T('Бизнес', 'Business')]], m.f.space) + '</select>') + '</div></div>';
+    out.html = out.html.replace('<div class="form">', spSel + '<div class="form">');
+    return out;
+  };
+  App.actions.accSpace = function (el) { S.modal.f.space = el.value; };
+  var saveAcc = App.actions.saveAccount;
+  App.actions.saveAccount = function () {
+    var m = S.modal, sp = m.f.space || 'personal', id = m.id, before = S.L.accounts.map(function (a) { return a.id; });
+    saveAcc();
+    var a = id ? App.acc(id) : S.L.accounts.filter(function (x) { return before.indexOf(x.id) < 0; })[0];
+    if (a && (a.space || 'personal') !== sp) { a.space = sp; App.save(); App.render(); }
+  };
+
+  /* ---------- close / liquidate with confirmation (history is kept) ---------- */
+  App.actions.accClose = function () {
+    var id = S.modal.id, a = App.acc(id), bal = C.balances(S.L)[id] || 0, liab = C.isLiab(a);
+    if (a.closed) { App.confirm(T('Открыть снова?', 'Reopen?'), T('Счёт «', 'Account “') + a.name + T('» снова появится в списках и расчётах.', '” will return to lists and totals.'), function () { App.commit(T('Счёт открыт снова', 'Account reopened'), function (L) { var x = C.byId(L.accounts, id); x.closed = false; x.closedAt = null; }); }); return; }
+    App.openModal('closeAcc', { id: id, bal: bal, liab: liab });
+  };
+  App.modals.closeAcc = function (m) {
+    var a = App.acc(m.id), bal = C.balances(S.L)[m.id] || 0, liab = C.isLiab(a), h = '<div class="card">';
+    var open = S.L.planned.filter(function (p) { return (p.accountId === m.id || p.fromAccountId === m.id || p.toAccountId === m.id) && C.plannedState(S.L, p, S.today).open; });
+    if (liab && bal > 0) {
+      h += '<div class="alert danger">' + I('alert') + '<div class="grow">' + T('По «', '“') + esc(a.name) + T('» остаётся долг ', '” still has debt of ') + '<b class="num">' + esc(F(bal, a.currency)) + '</b>. ' + T('Банк не закроет кредит с долгом. Сначала запиши погашение, затем закрой.', 'A lender will not close a line with debt. Record the repayment first, then close.') + '</div></div>' +
+        '<div class="btns"><button class="btn" data-a="modal" data-m="record" data-type="repayment" data-to="' + m.id + '">' + I('check') + T('Записать погашение', 'Record repayment') + '</button></div>';
+    } else if (!liab && bal !== 0) {
+      h += '<div class="alert warn">' + I('alert') + '<div class="grow">' + T('На счёте ещё ', 'The account still holds ') + '<b class="num">' + esc(F(bal, a.currency)) + '</b>. ' + T('Переведи остаток на другой счёт, чтобы деньги не «пропали» из баланса.', 'Move the remainder to another account so the money stays in your balance.') + '</div></div>' +
+        '<div class="btns"><button class="btn" data-a="modal" data-m="record" data-type="transfer" data-from="' + m.id + '">' + I('swap') + T('Перевести остаток', 'Transfer remainder') + '</button></div>';
+    } else {
+      h += '<div>' + (liab ? T('Долг по «', 'Debt on “') + esc(a.name) + T('» равен нулю. Закрыть кредитную линию?', '” is zero. Close the credit line?') : T('Закрыть счёт «', 'Close account “') + esc(a.name) + '»?') + '</div>' +
+        '<ul class="small muted"><li>' + T('Вся история операций сохранится и останется в отчётах.', 'All history stays and remains in reports.') + '</li><li>' + T('Счёт исчезнет из списков выбора и с главной.', 'It disappears from pickers and the dashboard.') + '</li><li>' + T('Его можно открыть снова в настройках счёта.', 'You can reopen it in account settings.') + '</li>' + (open.length ? '<li>' + T('Будущих плановых платежей: ', 'Open planned items: ') + open.length + T(' — они будут помечены как пропущенные.', ' — they will be marked skipped.') + '</li>' : '') + '</ul>' +
+        '<div class="btns"><button class="btn sec" data-a="closeModal">' + T('Отмена', 'Cancel') + '</button><button class="btn danger" data-a="accCloseOk" data-id="' + m.id + '">' + (liab ? T('Закрыть кредит', 'Close credit') : T('Закрыть счёт', 'Close account')) + '</button></div>';
+    }
+    return { title: liab ? T('Закрыть / ликвидировать кредит', 'Close / liquidate credit') : T('Закрыть счёт', 'Close account'), html: h + '</div>' };
+  };
+  App.actions.accCloseOk = function (el) {
+    var id = el.dataset.id; App.closeModal();
+    App.commit(T('Счёт закрыт, история сохранена', 'Account closed, history kept'), function (L) {
+      var a = C.byId(L.accounts, id); if (C.isLiab(a) && (C.balances(L)[id] || 0) > 0) return { ok: false };
+      a.closed = true; a.closedAt = new Date().toISOString();
+      L.planned.forEach(function (p) { if ((p.accountId === id || p.fromAccountId === id || p.toAccountId === id) && C.plannedState(L, p, S.today).open) p.status = 'skipped'; });
+    });
+  };
+
+  /* ---------- personal budget remainder → savings (explicit confirmation) ---------- */
+  App.modals.sweep = function (m) {
+    var f = m.f, ym = m.ym, br = C.budgetRemainder(S.L, ym, S.today);
+    if (!m.inited) { m.inited = true; var sav = S.L.accounts.filter(function (a) { return !a.closed && !a.archived && a.role === 'savings' && (a.space || 'personal') === 'personal'; })[0]; f.to = sav ? sav.id : ''; f.from = (S.L.accounts.filter(function (a) { return !a.closed && !C.isLiab(a) && !a.role && (a.space || 'personal') === 'personal'; })[0] || {}).id || ''; f.amount = App.amtStr(br.remainder); }
+    var h = '<div class="card"><div class="split"><span>' + T('Бюджет ', 'Budget ') + esc(App.fym(ym)) + '</span><span class="num">' + esc(F(br.spent)) + ' / ' + esc(F(br.limit)) + '</span></div><div class="split mt8 b"><span>' + T('Остаток', 'Remainder') + '</span><span class="num pos">' + esc(F(br.remainder)) + '</span></div></div>' +
+      '<div class="form"><div class="group">' + App.fld(T('Откуда', 'From'), '<select class="in" data-ch="fset" data-k="from">' + App.accOpts(function (a) { return !C.isLiab(a) && (a.space || 'personal') === 'personal'; }, f.from) + '</select>') +
+      App.fld(T('Куда (накопления)', 'To (savings)'), '<select class="in" data-ch="fset" data-k="to">' + App.accOpts(function (a) { return !C.isLiab(a) && (a.space || 'personal') === 'personal'; }, f.to, '—') + '</select>') +
+      App.fld(T('Сумма', 'Amount'), '<input class="in num" inputmode="decimal" data-ch="fset" data-k="amount" value="' + esc(f.amount) + '">') + '</div></div>' +
+      '<div class="dashed-note">' + T('Создастся запись «Пополнение накоплений» — перевод между твоими счетами (не расход). Сделай такой же перевод в банке, если накопления на отдельном счёте. Повторно за этот месяц перевод не создаётся.', 'Creates a “Savings top-up” record — a transfer between your accounts (not spending). Make the same transfer in your bank if savings sit in a separate account. Only one per month.') + '</div>' + (m.err ? '<div class="alert danger">' + esc(m.err) + '</div>' : '');
+    return { title: T('Остаток → накопления', 'Remainder → savings'), html: h, done: 'sweepOk', doneLabel: T('Перевести', 'Transfer') };
+  };
+  App.actions.fset = function (el) { S.modal.f[el.dataset.k] = el.value; };
+  App.actions.sweepOk = function () {
+    var m = S.modal, f = m.f, amt = App.toMinor(f.amount);
+    if (!f.from || !f.to || f.from === f.to) { m.err = T('Выбери два разных счёта', 'Pick two different accounts'); App.renderModal(); return; }
+    if (!(amt > 0)) { m.err = T('Неверная сумма', 'Invalid amount'); App.renderModal(); return; }
+    var r = App.commit(T('Остаток бюджета переведён в накопления', 'Budget remainder moved to savings'), function (L) { return C.sweepBudget(L, m.ym, f.from, f.to, S.today, amt); });
+    if (r && r.ok === false) { m.err = (r.errors || []).join(', '); App.renderModal(); return; }
+    App.closeModal();
+  };
+
+  /* ---------- goal templates & stages ---------- */
+  App.modals.goalTpl = function () {
+    var h = '<div class="tpl-grid">' + C.GOAL_TEMPLATES.map(function (t) { return '<button class="tpl" data-a="goalTplPick" data-id="' + t.id + '"><span class="cat-ic" style="background:' + t.color + '">' + I(t.icon) + '</span><b>' + esc(T(t.ru, t.en)) + '</b><span class="tiny muted">' + esc(T(t.hint.ru, t.hint.en)) + '</span></button>'; }).join('') +
+      '<button class="tpl" data-a="goalTplPick" data-id=""><span class="cat-ic" style="background:#8E8E93">' + I('target') + '</span><b>' + T('Своя цель', 'Custom goal') + '</b><span class="tiny muted">' + T('С нуля', 'From scratch') + '</span></button></div>';
+    h += '<div class="dashed-note">' + T('Суммы в шаблонах — стартовые ориентиры, поменяй под себя. Этапы цели: Старт → Первые шаги → Набираю обороты → Больше половины → Финишная прямая → Цель достигнута.', 'Template amounts are starting points — adjust. Stages: Start → First steps → Building momentum → Past halfway → Final stretch → Achieved.') + '</div>';
+    return { title: T('Шаблон цели', 'Goal template'), html: h };
+  };
+  App.actions.goalTplPick = function (el) {
+    var t = C.GOAL_TEMPLATES.filter(function (x) { return x.id === el.dataset.id; })[0];
+    App.openModal('goal', {}); var f = S.modal.f; App.modals.goal(S.modal);
+    if (t) { var tgt = t.type === 'short_debt' ? C.debtSummary(C.spaceView(S.L, 'personal'), S.today).short : t.target; Object.assign(f, { title: T(t.ru, t.en), target: App.amtStr(tgt), type: t.type, tplColor: t.color, tplIcon: t.icon, note: T(t.hint.ru, t.hint.en) }); }
+    App.renderModal();
+  };
+  App.actions.saveGoal = function () {
+    var m = S.modal, f = m.f, t = App.toMinor(f.target); if (!f.title || !t) { m.err = 'x'; App.toast(T('Укажи название и сумму', 'Enter a title and amount')); return; }
+    App.commit(T('Цель сохранена', 'Goal saved'), function (L) {
+      var o = { title: f.title, target: t, currency: f.currency, targetDate: f.targetDate || null, note: f.note, accountId: f.accountId || null };
+      if (m.id) Object.assign(C.byId(L.goals, m.id), o);
+      else L.goals.push(Object.assign({ id: C.uid('goal'), type: f.type && f.type !== 'apartment' ? f.type : 'custom', contributions: [], color: f.tplColor || '#64D2FF', icon: f.tplIcon || 'target', space: App.space() }, o));
+    });
+    App.closeModal();
+  };
+
+  /* ---------- yearly income plan: month / quarter / year, manual actuals, variance ---------- */
+  App.screens.incomeYear = function () {
+    var L = S.L; S.ui.incY = S.ui.incY || +S.today.slice(0, 4); S.ui.incMode = S.ui.incMode || 'month';
+    var y = S.ui.incY, mode = S.ui.incMode, rows = C.incomePlanView(L, y, mode), ip = L.incomePlan || { lines: [] };
+    var h = '<div class="split"><button class="iconbtn" data-a="incYear" data-d="-1">' + I('back') + '</button><b>' + y + '</b><button class="iconbtn" data-a="incYear" data-d="1" style="transform:scaleX(-1)">' + I('back') + '</button></div>';
+    h += '<div class="seg mt8">' + [['month', T('Месяцы', 'Months')], ['quarter', T('Кварталы', 'Quarters')], ['year', T('Год', 'Year')]].map(function (x) { return '<button class="' + (mode === x[0] ? 'on' : '') + '" data-a="incMode" data-v="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>';
+    var tot = C.incomePlanView(L, y, 'year')[0];
+    h += '<div class="v3kpis mt12">' + App.kpi(T('Ожидается за год', 'Expected this year'), F(tot.exp), 'plan', T('диапазон ', 'range ') + F(tot.low, 'AED', { dec: 0 }) + ' – ' + F(tot.high, 'AED', { dec: 0 })) + App.kpi(T('Факт введён', 'Actual entered'), tot.actual == null ? '—' : F(tot.actual), 'pos', tot.filled + T(' мес. из ', ' of ') + tot.planned) + App.kpi(T('Отклонение', 'Variance'), tot.variance == null ? '—' : App.FS(tot.variance), tot.variance < 0 ? 'neg' : 'pos', T('по месяцам с фактом', 'months with actuals')) + '</div>';
+    h += CH.bars({ id: 'incBars', height: 140, groups: rows.map(function (r) { return { label: mode === 'month' ? App.fymShort(r.key) : r.label, tip: (mode === 'month' ? App.fym(r.key) : r.label), values: [{ v: r.exp, color: 'var(--planned)', name: T('План', 'Plan') }, { v: r.actual || 0, color: 'var(--income)', name: T('Факт', 'Actual') }] }; }), fmtTip: function (v) { return F(v); }, legend: [{ name: T('План', 'Plan'), color: 'var(--planned)' }, { name: T('Факт (введён вручную)', 'Actual (entered)'), color: 'var(--income)' }] });
+    h += '<div class="list mt12">' + rows.map(function (r) {
+      var lbl = mode === 'month' ? App.fym(r.key) : r.label + ' ' + y, d = r.detail, sub = '';
+      if (d) sub = d.lines.filter(function (l) { return l.exp || l.actual != null; }).map(function (l) { return esc(l.title) + ': ' + esc(F(l.exp, 'AED', { dec: 0 })) + (l.low !== l.exp ? ' (' + T('мин ', 'min ') + esc(F(l.low, 'AED', { dec: 0 })) + ')' : '') + (l.actual != null ? ' → ' + esc(F(l.actual, 'AED', { dec: 0 })) : ''); }).join('<br>');
+      var varTxt = r.variance == null ? '<span class="tiny muted">' + T('факт не введён', 'no actual') + '</span>' : '<span class="num small ' + (r.variance < 0 ? 'neg' : 'pos') + '">' + esc(App.FS(r.variance)) + (r.expForActual ? ' · ' + App.pct(r.variance / r.expForActual) : '') + '</span>';
+      return '<' + (d ? 'button class="row tap" data-a="modal" data-m="incActual" data-ym="' + r.key + '"' : 'div class="row"') + '><div class="main-t"><div class="t1">' + esc(lbl) + '</div><div class="t2">' + (sub || T('план ', 'plan ') + esc(F(r.exp))) + '</div><div class="t2">' + T('записано в учёте: ', 'recorded: ') + esc(F(r.recorded)) + '</div></div><div class="amt" style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><span class="num">' + esc(r.actual == null ? F(r.exp) : F(r.actual)) + '</span>' + varTxt + '</div></' + (d ? 'button' : 'div') + '>';
+    }).join('') + '</div>';
+    h += '<div class="sec-h"><span class="t small">' + T('Строки дохода', 'Income lines') + '</span><button class="more" data-a="modal" data-m="incLine">' + I('plus', 'sm') + T('Строка', 'Line') + '</button></div><div class="list">' + (ip.lines.length ? ip.lines.map(function (l) { return '<button class="row tap" data-a="modal" data-m="incLine" data-id="' + l.id + '"><span class="cat-ic" style="background:' + (l.type === 'salary' ? 'var(--income)' : l.type === 'debt_return' ? '#66D4CF' : '#8E8E93') + '">' + I(l.type === 'debt_return' ? 'undo' : 'wallet') + '</span><div class="main-t"><div class="t1">' + esc(l.title) + '</div><div class="t2">' + esc({ salary: T('зарплата', 'salary'), debt_return: T('возврат долга мне — не доход', 'loan returned — not income'), other: T('прочее', 'other') }[l.type] || l.type) + '</div></div>' + I('chev', 'sm') + '</button>'; }).join('') : '<div class="empty">' + T('Добавь строку дохода: зарплата, подработка, возврат долга.', 'Add an income line: salary, side income, loan returned.') + '</div>') + '</div>';
+    h += '<div class="dashed-note">' + T('План — по месяцу поступления денег. Факт вводишь сам в конце месяца (нажми на месяц). «Записано в учёте» — сумма доходов и возвратов из записей за месяц, для сверки. Отклонение = факт − план.', 'Plan is by month of receipt. Enter actuals yourself at month end (tap a month). “Recorded” = income and returns from records that month, for reconciliation. Variance = actual − plan.') + '</div>';
+    return { title: T('План доходов на год', 'Yearly income plan'), html: h };
+  };
+  App.actions.incYear = function (el) { S.ui.incY += +el.dataset.d; App.render(); };
+  App.actions.incMode = function (el) { S.ui.incMode = el.dataset.v; App.render(); };
+  App.modals.incActual = function (m) {
+    var L = S.L, ym = m.ym, d = C.incomeMonth(L, ym), f = m.f;
+    if (!m.inited) { m.inited = true; d.lines.forEach(function (l) { f['a_' + l.id] = l.actual == null ? '' : App.amtStr(l.actual); f['e_' + l.id] = App.amtStr(l.exp); f['l_' + l.id] = App.amtStr(l.low); }); }
+    var h = '<div class="form">' + d.lines.map(function (l) {
+      return '<div class="group"><div class="group-t">' + esc(l.title) + '</div>' + App.fld(T('План', 'Plan'), '<input class="in num" inputmode="decimal" data-ch="fset" data-k="e_' + l.id + '" value="' + esc(f['e_' + l.id]) + '">') + (l.type === 'salary' ? App.fld(T('Пессимистично', 'Pessimistic'), '<input class="in num" inputmode="decimal" data-ch="fset" data-k="l_' + l.id + '" value="' + esc(f['l_' + l.id]) + '">') : '') + App.fld(T('Факт', 'Actual'), '<input class="in num" inputmode="decimal" placeholder="' + T('не введён', 'not entered') + '" data-ch="fset" data-k="a_' + l.id + '" value="' + esc(f['a_' + l.id]) + '">') + '</div>';
+    }).join('') + '</div><div class="dashed-note">' + T('Записано в учёте за месяц: ', 'Recorded this month: ') + esc(F(d.recorded)) + T('. Пустое поле факта = факт не введён.', '. Empty actual = not entered.') + '</div>';
+    return { title: App.fym(ym), html: h, done: 'incActualOk', doneLabel: T('Сохранить', 'Save') };
+  };
+  App.actions.incActualOk = function () {
+    var m = S.modal, f = m.f, d = C.incomeMonth(S.L, m.ym);
+    App.commit(T('План доходов обновлён', 'Income plan updated'), function (L) {
+      d.lines.forEach(function (l) {
+        var e = App.toMinor(f['e_' + l.id] || '0') || 0, lo = f['l_' + l.id] != null && f['l_' + l.id] !== '' ? App.toMinor(f['l_' + l.id]) : e;
+        C.setIncomeExpected(L, m.ym, l.id, { exp: e, low: Math.min(lo, e), high: e });
+        var a = f['a_' + l.id]; C.setIncomeActual(L, m.ym, l.id, a === '' || a == null ? null : App.toMinor(a));
+      });
+    });
+    App.closeModal();
+  };
+  App.modals.incLine = function (m) {
+    var ip = C.ensureIncomePlan(JSON.parse(JSON.stringify({ incomePlan: S.L.incomePlan }))), l = m.id ? C.byId(ip.lines, m.id) : null, f = m.f;
+    if (!m.inited) { m.inited = true; Object.assign(f, l ? { title: l.title, type: l.type, exp: '', low: '' } : { title: '', type: 'salary', exp: '', low: '', from: C.ymOf(S.today), n: '12' }); }
+    var x = App.fld(T('Название', 'Title'), '<input class="in" data-ch="fset" data-k="title" value="' + esc(f.title) + '">') + App.fld(T('Тип', 'Type'), '<select class="in" data-ch="fset" data-k="type">' + App.opts([['salary', T('Зарплата', 'Salary')], ['debt_return', T('Возврат долга мне', 'Loan returned to me')], ['other', T('Прочее', 'Other')]], f.type) + '</select>');
+    if (!l) x += App.fld(T('Сумма в месяц (план)', 'Monthly amount (plan)'), '<input class="in num" inputmode="decimal" data-ch="fset" data-k="exp" value="' + esc(f.exp) + '">') + App.fld(T('Пессимистично', 'Pessimistic'), '<input class="in num" inputmode="decimal" data-ch="fset" data-k="low" value="' + esc(f.low) + '">') + App.fld(T('С месяца', 'From month'), '<input class="in" type="month" data-ch="fset" data-k="from" value="' + esc(f.from) + '">') + App.fld(T('Месяцев', 'Months'), '<input class="in num" inputmode="numeric" data-ch="fset" data-k="n" value="' + esc(f.n) + '">');
+    var h = '<div class="form"><div class="group">' + x + '</div></div>' + (l ? '<div class="btns"><button class="btn danger" data-a="incLineDel" data-id="' + l.id + '">' + I('trash') + T('Удалить строку', 'Delete line') + '</button></div><div class="dashed-note">' + T('Суммы по месяцам меняются в самом месяце (нажми на месяц в списке).', 'Change monthly amounts inside each month.') + '</div>' : '');
+    return { title: l ? T('Строка дохода', 'Income line') : T('Новая строка дохода', 'New income line'), html: h, done: 'incLineOk', doneLabel: T('Сохранить', 'Save') };
+  };
+  App.actions.incLineOk = function () {
+    var m = S.modal, f = m.f; if (!f.title) { App.toast(T('Укажи название', 'Enter a title')); return; }
+    App.commit(T('Строка дохода сохранена', 'Income line saved'), function (L) {
+      var ip = C.ensureIncomePlan(L);
+      if (m.id) { var l = C.byId(ip.lines, m.id); l.title = f.title; l.type = f.type; return; }
+      var id = C.uid('inc'), e = App.toMinor(f.exp || '0') || 0, lo = f.low ? App.toMinor(f.low) : e;
+      ip.lines.push({ id: id, title: f.title, type: f.type });
+      for (var i = 0; i < Math.min(60, +f.n || 0); i++) if (e > 0) C.setIncomeExpected(L, C.addMonths(f.from || C.ymOf(S.today), i), id, { exp: e, low: Math.min(lo, e), high: e });
+    });
+    App.closeModal();
+  };
+  App.actions.incLineDel = function (el) {
+    var id = el.dataset.id; App.confirm(T('Удалить строку?', 'Delete line?'), T('План и введённые факты по этой строке будут удалены (можно отменить).', 'Plan and actuals for this line will be removed (undo available).'), function () {
+      App.commit(T('Строка удалена', 'Line deleted'), function (L) { var ip = C.ensureIncomePlan(L); ip.lines = ip.lines.filter(function (l) { return l.id !== id; }); ['months', 'actuals'].forEach(function (k) { Object.keys(ip[k]).forEach(function (ym) { delete ip[k][ym][id]; if (!Object.keys(ip[k][ym]).length) delete ip[k][ym]; }); }); });
+    }, true, T('Удалить', 'Delete'));
+  };
+
+  function incYearCard() {
+    var y = +S.today.slice(0, 4), ym = C.ymOf(S.today), cur = C.incomeMonth(S.L, ym), tot = C.incomePlanView(S.L, y, 'year')[0];
+    return '<div class="card tap" data-a="go" data-s="incomeYear"><div class="card-h"><span class="t">' + T('План доходов на год', 'Yearly income plan') + '</span><span class="more">' + I('chev', 'sm') + '</span></div><div class="kpis">' + App.kpi(App.fym(ym), F(cur.exp), 'plan', cur.actual == null ? T('факт не введён', 'no actual yet') : T('факт ', 'actual ') + F(cur.actual)) + App.kpi(String(y), F(tot.exp), 'pos', tot.variance == null ? T('месяц · квартал · год', 'month · quarter · year') : T('отклонение ', 'variance ') + App.FS(tot.variance)) + '</div></div>';
+  }
+  var planHub = App.screens.planning;
+  App.screens.planning = function () { var out = planHub(); out.html = incYearCard() + out.html; return out; };
+  var incScreen = App.screens.income;
+  App.screens.income = function (p) { var out = incScreen(p); out.html = incYearCard() + out.html; return out; };
+
+  /* ---------- rates: AED per USD, UZS per AED (inverse input), date caption ---------- */
+  App.screens.currencies = function () {
+    var L = S.L, d = L.rateDates || {};
+    var row = function (c) {
+      if (c === 'AED') return App.fld('AED' + T(' (базовая)', ' (base)'), '<span class="muted">1</span>');
+      if (c === 'UZS') return App.fld('1 AED = ? UZS', '<input class="in num" inputmode="decimal" data-ch="rateSetInv" data-c="UZS" value="' + esc(L.rates.UZS ? String(Math.round(1 / L.rates.UZS * 100) / 100) : '') + '">') + '<div class="tiny muted" style="padding:0 14px 8px">' + T('обновлён ', 'updated ') + esc(d.UZS ? App.fd(d.UZS, true) : '—') + '</div>';
+      return App.fld('1 ' + c + ' = ? AED', '<input class="in num" inputmode="decimal" data-ch="rateSet" data-c="' + c + '" value="' + esc(String(L.rates[c])) + '">') + '<div class="tiny muted" style="padding:0 14px 8px">' + T('обновлён ', 'updated ') + esc(d[c] ? App.fd(d[c], true) : '—') + '</div>';
+    };
+    var h = '<div class="form"><div class="group">' + Object.keys(L.rates).map(row).join('') + '</div></div>';
+    var rest = C.CURRENCIES.filter(function (c) { return !(c in L.rates); });
+    if (rest.length) h += '<div class="form mt12"><div class="group">' + App.fld(T('Добавить валюту', 'Add currency'), '<select class="in" data-ch="rateAdd"><option value="">—</option>' + rest.map(function (c) { return '<option>' + c + '</option>'; }).join('') + '</select>') + '</div></div>';
+    h += '<div class="dashed-note">' + T('Курсы вводятся вручную и не загружаются из интернета. Дата обновления ставится автоматически при изменении. UZS вводится как «сколько сумов за 1 AED». На главной под общим балансом показаны пересчёты в USD и UZS.', 'Rates are manual, never downloaded. The update date is set when you change a rate. UZS is entered as “UZS per 1 AED”. The dashboard shows USD and UZS equivalents.') + '</div>';
+    return { title: T('Валюты и курсы', 'Currencies & rates'), html: h };
+  };
+  App.actions.rateSet = function (el) { var v = parseFloat(String(el.value).replace(',', '.').replace(/\s/g, '')); if (!(v > 0)) { App.toast(T('Неверный курс', 'Invalid rate')); App.render(); return; } App.commit(T('Курс ', 'Rate ') + el.dataset.c + ' = ' + v, function (L) { L.rates[el.dataset.c] = v; L.rateDates = L.rateDates || {}; L.rateDates[el.dataset.c] = S.today; }); };
+  App.actions.rateSetInv = function (el) { var v = parseFloat(String(el.value).replace(',', '.').replace(/\s/g, '')); if (!(v > 0)) { App.toast(T('Неверный курс', 'Invalid rate')); App.render(); return; } App.commit('1 AED = ' + v + ' ' + el.dataset.c, function (L) { L.rates[el.dataset.c] = 1 / v; L.rateDates = L.rateDates || {}; L.rateDates[el.dataset.c] = S.today; }); };
+
+  /* ---------- statistics: monthly / quarterly expense summary ---------- */
+  function summaryHtml(kind, ym) {
+    var L = C.spaceView(S.L, App.space()), r = kind === 'quarter' ? C.quarterRange(ym) : { from: ym + '-01', to: C.lastDay(ym), label: App.fym(ym) };
+    var s = C.expenseSummary(L, r.from, r.to), prevYm = kind === 'quarter' ? C.addMonths(ym, -3) : C.addMonths(ym, -1);
+    var pr = kind === 'quarter' ? C.quarterRange(prevYm) : { from: prevYm + '-01', to: C.lastDay(prevYm) }, ps = C.expenseSummary(L, pr.from, pr.to);
+    var diff = s.total - ps.total;
+    var h = '<div class="kpis">' + App.kpi(T('Всего выплат', 'Total outflows'), F(s.total), 'neg', T('к прошлому периоду ', 'vs previous ') + App.FS(diff)) + App.kpi(T('Расходы на жизнь', 'Living costs'), F(s.consumer), '') + App.kpi(T('Погашение долгов (тело)', 'Debt principal'), F(s.debtPrincipal), 'plan') + App.kpi(T('Проценты и комиссии', 'Interest & fees'), F(s.finance), 'neg') + App.kpi(T('Семье', 'Family'), F(s.family), 'sav') + App.kpi(T('Заработано', 'Earned'), F(s.earned), 'pos') + '</div>';
+    if (s.categories.length) h += '<div class="mt12">' + s.categories.slice(0, 8).map(function (c) { var cat = App.cat(c.id); return '<div class="split small mt8"><span>' + App.catIcon(cat) + ' ' + esc(App.catName(cat)) + '</span><span class="num">' + esc(F(c.value)) + ' · ' + App.pct(s.consumer ? c.value / s.consumer : 0, 0) + '</span></div>'; }).join('') + '</div>';
+    else h += '<div class="tiny muted mt8">' + T('Расходов на жизнь в записях за период нет.', 'No living costs recorded in this period.') + '</div>';
+    if (kind === 'month') { var br = C.budgetRemainder(S.L, ym, S.today); if (br.limit) h += '<div class="tiny muted mt8">' + T('Личный бюджет: ', 'Personal budget: ') + esc(F(br.spent)) + ' / ' + esc(F(br.limit)) + (br.swept ? T(' · остаток переведён в накопления', ' · remainder moved to savings') : '') + '</div>'; }
+    return { label: r.label, html: h };
+  }
+  var statsHub = App.screens.stats;
+  App.screens.stats = function () {
+    var out = statsHub(), ym = C.ymOf(S.today), mo = summaryHtml('month', ym), q = summaryHtml('quarter', ym);
+    out.html = '<div class="card tap" data-a="go" data-s="stat" data-k="summary"><div class="card-h"><span class="t">' + T('Сводка расходов', 'Expense summary') + '</span><span class="more">' + T('месяц · квартал', 'month · quarter') + I('chev', 'sm') + '</span></div><div class="small muted">' + esc(mo.label) + '</div>' + mo.html + '</div>' + out.html;
+    return out;
+  };
+  var statDetail = App.screens.stat;
+  App.screens.stat = function (p) {
+    if (p.k !== 'summary') return statDetail(p);
+    S.ui.sumKind = S.ui.sumKind || 'month'; S.ui.sumYm = S.ui.sumYm || C.ymOf(S.today);
+    var kind = S.ui.sumKind, ym = S.ui.sumYm, step = kind === 'quarter' ? 3 : 1, s = summaryHtml(kind, ym);
+    var h = '<div class="seg">' + [['month', T('Месяц', 'Month')], ['quarter', T('Квартал', 'Quarter')]].map(function (x) { return '<button class="' + (kind === x[0] ? 'on' : '') + '" data-a="sumKind" data-v="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>';
+    h += '<div class="split mt12"><button class="iconbtn" data-a="sumShift" data-d="' + (-step) + '">' + I('back') + '</button><b>' + esc(s.label) + '</b><button class="iconbtn" data-a="sumShift" data-d="' + step + '" style="transform:scaleX(-1)">' + I('back') + '</button></div>';
+    h += '<div class="card mt12">' + s.html + '</div>';
+    var months = []; for (var i = 5; i >= 0; i--) months.push(C.addMonths(ym, -i * step));
+    h += '<div class="card">' + CH.bars({ id: 'sumBars', height: 150, groups: months.map(function (x) { var r = kind === 'quarter' ? C.quarterRange(x) : { from: x + '-01', to: C.lastDay(x), label: App.fymShort(x) }, e = C.expenseSummary(C.spaceView(S.L, App.space()), r.from, r.to); return { label: kind === 'quarter' ? 'Q' + r.q + ' ' + String(r.y).slice(2) : r.label, values: [{ v: e.consumer, color: 'var(--expense)', name: T('Жизнь', 'Living') }, { v: e.debtPrincipal, color: 'var(--planned)', name: T('Долги', 'Debt') }, { v: e.finance, color: '#FF9F0A', name: T('Проценты', 'Interest') }, { v: e.family, color: 'var(--savings)', name: T('Семья', 'Family') }] }; }), fmtTip: function (v) { return F(v); }, legend: [{ name: T('Жизнь', 'Living'), color: 'var(--expense)' }, { name: T('Долги', 'Debt'), color: 'var(--planned)' }, { name: T('Проценты', 'Interest'), color: '#FF9F0A' }, { name: T('Семья', 'Family'), color: 'var(--savings)' }] }) + '</div>';
+    h += '<div class="dashed-note">' + T('Сводка строится по фактическим записям. Погашение тела долга и переводы семье показаны отдельно от расходов на жизнь; полученные займы не считаются доходом.', 'Built from actual records. Debt principal and family transfers are shown apart from living costs; loans received are not income.') + '</div>';
+    return { title: T('Сводка расходов', 'Expense summary'), html: h };
+  };
+  App.actions.sumKind = function (el) { S.ui.sumKind = el.dataset.v; App.render(); };
+  App.actions.sumShift = function (el) { S.ui.sumYm = C.addMonths(S.ui.sumYm, +el.dataset.d); App.render(); };
+})();
+
+</script>
+<script>
+/* Akbar Finance — Академия: годовая программа (52 недели). Контент уроков лежит в отдельных файлах week-NN.js
+   и подключается по одной неделе. Неделя без файла показывается на карте как «скоро». */
+(function (g) {
+  'use strict';
+  var LEVELS = [
+    { n: 1, title: 'Основа', en: 'Foundations', color: '#30D158', weeks: [1, 8], about: 'Учёт, бюджет, денежный поток, личный финансовый отчёт, привычки.' },
+    { n: 2, title: 'Долги', en: 'Debt', color: '#FF453A', weeks: [9, 18], about: 'Реальная стоимость денег, APR, лавина и снежный ком, снятие наличных, переговоры с кредитором.' },
+    { n: 3, title: 'Подушка и цели', en: 'Safety net & goals', color: '#FF9F0A', weeks: [19, 26], about: 'Резервный фонд, страхование, цели с датами, крупные покупки.' },
+    { n: 4, title: 'Инвестиции', en: 'Investing', color: '#0A84FF', weeks: [27, 40], about: 'Сложный процент, инфляция, риск и доходность, диверсификация, индексные фонды.' },
+    { n: 5, title: 'Мышление финансиста', en: 'Financial thinking', color: '#BF5AF2', weeks: [41, 52], about: 'Капитал, отчёты, ROI/NPV, сценарии, решения в условиях неопределённости.' }
+  ];
+  function W(n, title, goal, topics) { return { n: n, title: title, goal: goal, topics: topics }; }
+  var WEEKS = [
+    W(1, 'Учёт: куда уходят деньги', 'Видеть все деньги: что пришло, что ушло, что осталось.', ['Зачем вести учёт', 'Доход, расход, перевод, долг', 'Категории', 'Мелкие регулярные траты', 'Денежный поток месяца', 'Сверка с банком']),
+    W(2, 'Бюджет: решение заранее', 'Распределить доход до того, как он потрачен.', ['50/30/20', 'Бюджет с нуля', 'Сначала заплати себе', 'Конверты и личный бюджет', 'Нерегулярные расходы']),
+    W(3, 'Личный финансовый отчёт', 'Собрать баланс и отчёт о движении денег на одной странице.', ['Активы и обязательства', 'Чистый капитал', 'Ликвидность', 'Долговая нагрузка', 'Норма сбережений']),
+    W(4, 'Поведение и привычки', 'Понять, почему мы тратим иррационально, и встроить автоматические правила.', ['Ментальный учёт', 'Неприятие потерь', 'Предпочтение «сейчас»', 'Якоря и скидки', 'Автоматизация', 'Правило 24 часов']),
+    W(5, 'Доход: как он устроен', 'Разобрать доход на части и найти рычаги роста.', ['Фикс и переменная часть', 'Пессимистичный и базовый план', 'Отклонения план/факт', 'Налоги и удержания в ОАЭ']),
+    W(6, 'Обязательные платежи и календарь', 'Ни одного пропущенного платежа.', ['Календарь платежей', 'Минимальный платёж vs полный', 'Буфер на счёте', 'Автоплатежи']),
+    W(7, 'Семья и поддержка родителей', 'Помогать родным по плану, а не из остатка.', ['Перевод как обязательство', 'Курсы и комиссии переводов', 'Цель для семьи', 'Разговор о деньгах']),
+    W(8, 'Итог уровня 1: финансовая система', 'Собрать свою систему: учёт, бюджет, календарь, обзор месяца.', ['Ежемесячный ритуал', 'Метрики здоровья', 'Экзамен уровня']),
+    W(9, 'Реальная стоимость долга', 'Считать долг в годовых, а не в «маленьких платежах».', ['Номинальная ставка и APR', 'Комиссии как проценты', 'Срок и переплата']),
+    W(10, 'Кредитные карты изнутри', 'Понимать выписку, грейс-период и минимальный платёж.', ['Цикл выписки', 'Грейс-период', 'Минимальный платёж', 'Превышение лимита']),
+    W(11, 'Снятие наличных с карты', 'Знать цену cash advance до того, как снимать.', ['Комиссия за снятие', 'Проценты с первого дня', 'Лимит наличных', 'Альтернативы']),
+    W(12, 'Займы до зарплаты и BNPL', 'Оценить микрозаймы и рассрочки в годовых.', ['Комиссия 10% в месяц = ?% годовых', 'BNPL: оплата частями', 'Ловушка рефинансирования']),
+    W(13, 'Лавина и снежный ком', 'Выбрать порядок погашения осознанно.', ['Лавина: по ставке', 'Снежный ком: по сумме', 'Гибрид', 'Психология маленьких побед']),
+    W(14, 'План выхода из долгов', 'Дата свободы от краткосрочных долгов.', ['Свободный остаток', 'График', 'Сценарии', 'Контрольные точки']),
+    W(15, 'Рефинансирование и консолидация', 'Когда новый кредит помогает, а когда вредит.', ['Сравнение условий', 'Скрытые комиссии', 'Досрочное погашение']),
+    W(16, 'Переговоры с банком', 'Просить реструктуризацию, отсрочку, снижение комиссий.', ['Что можно просить', 'Скрипт разговора', 'Документы']),
+    W(17, 'Кредитная история', 'Как формируется рейтинг и что на него влияет.', ['Кредитное бюро', 'Использование лимита', 'Просрочки']),
+    W(18, 'Итог уровня 2', 'Экзамен по долгам и личный план погашения.', ['Кейс', 'Экзамен', 'План']),
+    W(19, 'Резервный фонд', 'Сколько нужно и где держать.', ['3–6 месяцев расходов', 'Где хранить', 'Когда тратить']),
+    W(20, 'Риски и страхование', 'Защитить доход и здоровье.', ['Медицинская страховка', 'Страхование жизни', 'Что не нужно страховать']),
+    W(21, 'Цели SMART', 'Превратить мечты в цели с суммой и датой.', ['Сумма, срок, взнос', 'Приоритеты', 'Этапы']),
+    W(22, 'Крупные покупки', 'Покупать машину/технику без новых долгов.', ['Полная стоимость владения', 'Копить vs кредит', 'Правило ожидания']),
+    W(23, 'Свадьба, переезд, обучение', 'Планировать большие жизненные события.', ['Бюджет события', 'Обучение как инвестиция', 'Окупаемость']),
+    W(24, 'Жильё для семьи', 'Как подойти к цели «квартира».', ['Аренда vs покупка', 'Первый взнос', 'Ипотека: что сравнивать в ОАЭ и на родине']),
+    W(25, 'Валюта и переводы', 'AED, USD, UZS: курсы и риски.', ['Валютный риск', 'Привязка AED к USD', 'Инфляция в UZS']),
+    W(26, 'Итог уровня 3', 'Экзамен и обновлённый план целей.', ['Кейс', 'Экзамен', 'Карта целей']),
+    W(27, 'Сложный процент', 'Почувствовать время как главный актив.', ['Формула', 'Правило 72', 'Регулярные взносы']),
+    W(28, 'Инфляция', 'Реальная доходность vs номинальная.', ['Индекс цен', 'Реальная ставка', 'Деньги «под матрасом»']),
+    W(29, 'Риск и доходность', 'Нет доходности без риска.', ['Волатильность', 'Просадки', 'Горизонт']),
+    W(30, 'Классы активов', 'Депозиты, облигации, акции, золото, недвижимость.', ['Свойства', 'Ликвидность', 'Корреляции']),
+    W(31, 'Диверсификация', 'Не класть всё в одну корзину — и почему это работает.', ['Портфель', 'Ребалансировка', 'Ошибки']),
+    W(32, 'Индексные фонды и ETF', 'Пассивное инвестирование.', ['Что такое индекс', 'Комиссии фонда', 'Почему активные фонды чаще проигрывают индексу']),
+    W(33, 'Как выбрать брокера', 'Безопасность и регулирование.', ['Регуляторы', 'Комиссии', 'Красные флаги']),
+    W(34, 'Мошенничество и пирамиды', 'Распознавать «гарантированный доход».', ['Признаки пирамиды', 'Крипто-схемы', 'Проверка']),
+    W(35, 'Профиль инвестора', 'Риск-профиль и горизонт.', ['Анкета', 'Распределение активов', 'Правила']),
+    W(36, 'Регулярное инвестирование', 'Усреднение и дисциплина.', ['DCA', 'Автоматизация', 'Поведение на падениях']),
+    W(37, 'Поведенческие ошибки инвестора', 'Почему инвестор — сам себе враг.', ['Погоня за доходностью', 'Паника', 'Чрезмерная уверенность']),
+    W(38, 'Пенсия и долгий горизонт', 'Думать на 20–30 лет.', ['Целевая сумма', 'Правило 4%: что это и ограничения', 'Сценарии']),
+    W(39, 'Налоги и инвестиции', 'Налоговые резиденства и удержания (обзор).', ['Резидентство', 'Дивиденды', 'Учёт']),
+    W(40, 'Итог уровня 4', 'Экзамен и инвестиционная политика.', ['Кейс', 'Экзамен', 'Своя инвестиционная политика']),
+    W(41, 'Капитал человека', 'Навыки и доход как главный актив.', ['Человеческий капитал', 'Карьера', 'Обучение']),
+    W(42, 'Отчёты как у компании', 'Баланс, P&L, cash flow для себя.', ['Три отчёта', 'Связь между ними', 'Квартальный отчёт']),
+    W(43, 'ROI и окупаемость', 'Считать отдачу от решений.', ['ROI', 'Срок окупаемости', 'Ошибки']),
+    W(44, 'Стоимость денег во времени и NPV', 'Сравнивать деньги сегодня и завтра.', ['Дисконтирование', 'NPV', 'Ставка дисконтирования']),
+    W(45, 'Сценарный анализ', 'Пессимистичный, базовый, оптимистичный.', ['Сценарии', 'Чувствительность', 'Точка безубыточности']),
+    W(46, 'Решения в неопределённости', 'Ожидаемая ценность и риск разорения.', ['Ожидаемое значение', 'Асимметрия', 'Запас прочности']),
+    W(47, 'Побочный доход и бизнес', 'Проверить идею цифрами.', ['Юнит-экономика', 'Затраты', 'Отдельный учёт бизнеса']),
+    W(48, 'Переговоры о зарплате', 'Готовиться к разговору с работодателем.', ['Рыночная ставка', 'Аргументы', 'Пакет']),
+    W(49, 'Финансовые системы и автоматизация', 'Система, работающая без силы воли.', ['Потоки', 'Правила', 'Обзоры']),
+    W(50, 'Ценности и деньги', 'Тратить на то, что важно.', ['Ценности', 'Достаточность', 'Счастье и деньги']),
+    W(51, 'Годовой обзор', 'Проверить год цифрами.', ['Год в цифрах', 'Что сработало', 'Ошибки']),
+    W(52, 'Итог года и план на следующий', 'Выпускной кейс и план на год.', ['Выпускной кейс', 'Финальный экзамен', 'План на год'])
+  ];
+  WEEKS.forEach(function (w) {
+    LEVELS.forEach(function (l) { if (w.n >= l.weeks[0] && w.n <= l.weeks[1]) w.level = l.n; });
+    w.quarter = Math.min(4, Math.floor((w.n - 1) / 13) + 1);
+  });
+  var A = g.AFAcademy = g.AFAcademy || {};
+  A.LEVELS = LEVELS; A.WEEKS = WEEKS; A.content = A.content || {};
+  A.addWeek = function (w) { A.content[w.n] = w; };
+  A.hasWeek = function (n) { return !!A.content[n]; };
+  /* ordered list of lessons available in loaded weeks */
+  A.lessons = function () { var out = []; Object.keys(A.content).map(Number).sort(function (a, b) { return a - b; }).forEach(function (n) { (A.content[n].lessons || []).forEach(function (l, i) { out.push(Object.assign({ week: n, day: i + 1 }, l)); }); }); return out; };
+})(typeof self !== 'undefined' ? self : this);
+
+</script>
+<script>
+/* Академия — «Для свободного времени». Бесплатные курсы, лекции, книги, аудиокниги и подкасты.
+   Все ссылки открывались при добавлении (25.11.2026). Языки: EN — на английском, RU — на русском. */
+(function (g) {
+  var A = g.AFAcademy = g.AFAcademy || {};
+  A.LIBRARY = [
+    { group: 'Курсы и лекции', items: [
+      { t: 'MIT 15.401 Finance Theory I (Andrew Lo)', d: 'Классический вводный курс MIT по финансам: стоимость денег во времени, оценка активов, риск. Видео, слайды, задачи.', lang: 'EN', url: 'https://ocw.mit.edu/courses/15-401-finance-theory-i-fall-2008/' },
+      { t: 'MIT 15.401 — плейлист лекций на YouTube', d: 'Те же лекции Эндрю Ло в видео.', lang: 'EN', url: 'https://www.youtube.com/playlist?list=PLUl4u3cNGP63B2lDhyKOsImI7FjCf6eDW' },
+      { t: 'Yale ECON 252 Financial Markets (Robert Shiller)', d: 'Open Yale Courses: финансовые рынки, риск, поведенческие финансы от нобелевского лауреата.', lang: 'EN', url: 'https://oyc.yale.edu/economics/econ-252' },
+      { t: 'Financial Markets (2011) with Robert Shiller — YouTube', d: 'Видеоверсия курса Шиллера.', lang: 'EN', url: 'https://www.youtube.com/playlist?list=PL8FB14A2200B87185' },
+      { t: 'Coursera: Financial Markets (Yale)', d: 'Онлайн-курс Шиллера; материалы можно смотреть бесплатно в режиме аудита (сертификат — платно).', lang: 'EN', url: 'https://www.coursera.org/learn/financial-markets-global' },
+      { t: 'Coursera: Behavioral Finance (Duke)', d: 'Поведенческие финансы: почему мы ошибаемся с деньгами и как это исправлять. Аудит бесплатно.', lang: 'EN', url: 'https://www.coursera.org/learn/duke-behavioral-finance' },
+      { t: 'MIT 15.433 Investments', d: 'Курс MIT по инвестициям: портфель, риск, облигации, акции. Для уровня 4.', lang: 'EN', url: 'https://ocw.mit.edu/courses/15-433-investments-spring-2003/' },
+      { t: 'Khan Academy: Personal finance', d: 'Короткие уроки по личным финансам: бюджет, кредиты, проценты, инвестиции.', lang: 'EN', url: 'https://www.khanacademy.org/college-careers-more/personal-finance' },
+      { t: 'Финансовая культура (Банк России)', d: 'Статьи, курсы и калькуляторы по финансовой грамотности на русском.', lang: 'RU', url: 'https://fincult.info/' },
+      { t: 'TED: Daniel Kahneman — The riddle of experience vs. memory', d: 'Нобелевский лауреат о том, как мы оцениваем опыт и счастье — основа поведенческой экономики.', lang: 'EN', url: 'https://www.ted.com/talks/daniel_kahneman_the_riddle_of_experience_vs_memory' }
+    ] },
+    { group: 'Книги', items: [
+      { t: 'Морган Хаусел — «Психология денег»', d: 'О поведении, а не о формулах: почему богатство — это то, чего не видно. Есть на русском.', lang: 'RU/EN', url: 'https://en.wikipedia.org/wiki/The_Psychology_of_Money' },
+      { t: 'Джордж Клейсон — «Самый богатый человек в Вавилоне»', d: 'Притчи 1926 года: «часть всего, что ты зарабатываешь, принадлежит тебе». Есть на русском.', lang: 'RU/EN' },
+      { t: 'Бенджамин Грэм — «Разумный инвестор»', d: 'Классика инвестирования: стоимость, запас прочности, поведение инвестора. Для уровня 4.', lang: 'RU/EN' },
+      { t: 'Даниэль Канеман — «Думай медленно… решай быстро»', d: 'Две системы мышления, эвристики и ошибки — основа недели 4.', lang: 'RU/EN' },
+      { t: 'Джон Богл — «The Little Book of Common Sense Investing»', d: 'Почему индексные фонды и низкие комиссии побеждают большинство активных стратегий.', lang: 'RU/EN' },
+      { t: 'Ричард Талер — «Новая поведенческая экономика»', d: 'Ментальный учёт, умолчания, «подталкивание» — от нобелевского лауреата.', lang: 'RU/EN' }
+    ] },
+    { group: 'Аудиокниги', items: [
+      { t: 'The Richest Man in Babylon — аудиокнига LibriVox', d: 'Бесплатная аудиокнига в общественном достоянии (Internet Archive), на английском.', lang: 'EN', url: 'https://archive.org/details/richestman_2604_librivox' },
+      { t: '«Психология денег», «Думай медленно… решай быстро» — аудиоверсии', d: 'Платные аудиоверсии есть в крупных магазинах аудиокниг; ищи по названию.', lang: 'RU/EN' }
+    ] },
+    { group: 'Подкасты', items: [
+      { t: 'Planet Money (NPR)', d: 'Экономика простыми историями, 20–30 минут.', lang: 'EN', url: 'https://www.npr.org/podcasts/510289/planet-money' },
+      { t: 'The Indicator from Planet Money', d: 'Одна экономическая идея за 10 минут — удобно в дорогу.', lang: 'EN', url: 'https://www.npr.org/podcasts/510325/the-indicator-from-planet-money' },
+      { t: 'Freakonomics Radio', d: 'Неочевидная экономика и поведение людей.', lang: 'EN', url: 'https://freakonomics.com/' }
+    ] },
+    { group: 'Инструменты', items: [
+      { t: 'Investor.gov — калькулятор сложного процента', d: 'Официальный калькулятор Комиссии по ценным бумагам США: увидеть силу регулярных взносов.', lang: 'EN', url: 'https://www.investor.gov/financial-tools-calculators/calculators/compound-interest-calculator' }
+    ] }
+  ];
+})(typeof self !== 'undefined' ? self : this);
+
+</script>
+<!-- academy weeks: one file per week; add a new line when a new week is published -->
+<script>
+/* Академия · неделя 1 · Учёт: куда уходят деньги */
+AFAcademy.addWeek({
+  n: 1,
+  lessons: [
+    { id: 'w01d1', title: 'Зачем вести учёт', min: 10, body: [
+      'Учёт — это не про жадность и не про запреты. Это про видимость. Нельзя управлять тем, чего не видишь: пилот не летит без приборов, компания не работает без бухгалтерии. Твоя жизнь — тоже маленькая экономика с доходами, расходами, долгами и целями.',
+      '## Три вопроса учёта',
+      '- Сколько пришло? (зарплата, возвраты долгов мне, прочие поступления)',
+      '- Сколько ушло и куда? (жизнь, долги, семья, комиссии)',
+      '- Сколько осталось — и где это лежит?',
+      'Если на эти три вопроса ты отвечаешь за 30 секунд, у тебя есть система. Если нет — деньги «куда-то уходят».',
+      '## Учёт ≠ бюджет',
+      'Учёт смотрит назад: что уже произошло. Бюджет смотрит вперёд: что ты решаешь сделать. Без честного учёта бюджет — фантазия; без бюджета учёт — просто архив. На этой неделе мы строим первое, на следующей — второе.',
+      '> Сейчас в твоей книге: собственные средства {own}, общий долг {debt}. Эти цифры — стартовая точка, а не приговор. Через год ты сравнишь их с новыми.',
+      'Практика сегодня: открой приложение и проверь, что все твои счета и долги внесены. Нет ли счёта, о котором ты «забыл»?'
+    ], quiz: [
+      { q: 'Чем учёт отличается от бюджета?', a: ['Учёт — про прошлое, бюджет — про план', 'Это одно и то же', 'Бюджет нужен только компаниям'], ok: 0, why: 'Учёт фиксирует факты, бюджет — решения заранее. Нужны оба.' },
+      { q: 'Какой вопрос НЕ входит в базовые три вопроса учёта?', a: ['Сколько пришло', 'Сколько ушло и куда', 'Какой курс акций будет завтра'], ok: 2, why: 'Учёт отвечает на вопросы о твоих фактических деньгах, а не прогнозирует рынок.' },
+      { q: 'Зачем записывать долги, если «денег на них всё равно нет»?', a: ['Незачем', 'Без них картина неполная и решения будут ошибочными', 'Чтобы банк видел'], ok: 1, why: 'Долги — часть твоего финансового положения. Без них чистый капитал и план выхода не посчитать.' }
+    ] },
+    { id: 'w01d2', title: 'Доход, расход, перевод, долг', min: 10, body: [
+      'Самая частая ошибка учёта — смешивать разные типы движения денег. Из-за этого «доход» выглядит больше, а «расходы» — меньше или больше, чем на самом деле.',
+      '## Четыре типа операций',
+      '- Доход — деньги, которые ты заработал (зарплата, чаевые, подработка). Возврат долга тебе — это возврат твоих же денег, не доход.',
+      '- Расход — деньги, потраченные на жизнь: еда, связь, одежда, развлечения.',
+      '- Перевод — деньги переехали между твоими счетами. Ни доход, ни расход.',
+      '- Долг — получение кредита увеличивает деньги на счёте, но это НЕ доход. Погашение тела кредита — НЕ расход на жизнь, это уменьшение обязательства. А вот проценты и комиссии — настоящий расход.',
+      '## Покупка кредиткой',
+      'Расход возникает в момент покупки. Когда потом гасишь карту, это погашение долга, а не второй расход. Если записать обе операции как расходы — траты удвоятся на бумаге.',
+      '> Именно по этим правилам работает Akbar Finance: заём отмечается «не доход», погашение делится на основной долг и проценты.',
+      'Почему это важно: если считать займы доходом, кажется, что ты живёшь по средствам, хотя на самом деле финансируешь жизнь долгом.'
+    ], quiz: [
+      { q: 'Ты взял 1 000 AED займа. Как это учесть?', a: ['Как доход', 'Как получение займа: деньги на счёте растут, долг растёт', 'Никак'], ok: 1, why: 'Заём увеличивает и деньги, и долг. Это не доход.' },
+      { q: 'Ты погасил 2 000 AED кредита, из них 400 — проценты. Какой расход на жизнь?', a: ['2 000', '400 — проценты; 1 600 — уменьшение долга', '0'], ok: 1, why: 'Тело долга уменьшает обязательство, проценты — реальная стоимость денег.' },
+      { q: 'Покупка картой на 100 AED, а затем погашение карты на 100 AED. Сколько расходов?', a: ['200 AED', '100 AED', '0 AED'], ok: 1, why: 'Расход один — в момент покупки. Погашение карты — это возврат долга.' }
+    ] },
+    { id: 'w01d3', title: 'Категории: что считать отдельно', min: 10, body: [
+      'Категории превращают список трат в ответ на вопрос «куда уходят деньги». Но слишком много категорий — и учёт становится каторгой; слишком мало — ничего не видно.',
+      '## Правило 8–12 категорий',
+      'Начни с 8–12 крупных категорий: еда, кафе, транспорт, связь, одежда, здоровье, развлечения, подарки, семья, финансы (проценты и комиссии), прочее. Подкатегории добавляй, только если хочешь что-то изменить.',
+      '## Два полезных среза',
+      '- Фиксированные и переменные. Фиксированные почти не меняются (кредит, связь), переменные зависят от решений (кафе, покупки).',
+      '- Обязательные и желательные. Обязательные — без них нельзя (платёж по кредиту, лекарства). Желательные — приятные, но отложимые.',
+      'Сокращать проще всего переменные желательные расходы. Но и фиксированные стоит пересматривать раз в год: тариф связи, подписки.',
+      '> Твой личный бюджет в книге — {budget} в месяц. Подумай: какие 2–3 категории съедают его быстрее всего?',
+      'Правило записи: одна трата — одна запись, с категорией и заметкой, если покупка необычная. Через месяц заметки скажут больше, чем память.'
+    ], quiz: [
+      { q: 'Сколько категорий разумно на старте?', a: ['3', '8–12', '50+'], ok: 1, why: 'Достаточно, чтобы видеть структуру, и не так много, чтобы бросить учёт.' },
+      { q: 'Какой расход проще всего сократить быстро?', a: ['Фиксированный обязательный', 'Переменный желательный', 'Платёж по кредиту'], ok: 1, why: 'Переменные желательные расходы зависят от ежедневных решений.' },
+      { q: 'Проценты по кредиту относятся к категории…', a: ['Еда', 'Финансы (стоимость денег)', 'Перевод'], ok: 1, why: 'Проценты и комиссии — это цена заёмных денег.' }
+    ] },
+    { id: 'w01d4', title: 'Мелкие регулярные траты', min: 10, body: [
+      'Бенджамин Франклин писал в «Пути к богатству»: «Остерегайтесь мелких расходов: маленькая течь потопит большой корабль». Мелкие траты незаметны по одной, но регулярны — а регулярность превращает их в крупную сумму.',
+      '## Посчитаем',
+      '- 15 AED в день на кофе и перекусы = 450 AED в месяц = 5 475 AED в год.',
+      '- 3 подписки по 30 AED = 90 AED в месяц = 1 080 AED в год.',
+      '- 2 доставки еды в неделю по 45 AED = около 390 AED в месяц.',
+      'Это не значит «никогда не пей кофе». Это значит — тратить осознанно: на то, что действительно приносит радость, а не по привычке.',
+      '## Метод «годовой цены»',
+      'Перед регулярной покупкой умножь её цену на частоту в году. Вопрос не «стоит ли этот кофе 15 AED», а «стоит ли эта привычка 5 475 AED в год — по сравнению с моими целями».',
+      '> Для сравнения: твой ежемесячный платёж по долгосрочному кредиту и личный бюджет {budget} — это ориентиры. Сколько мелких привычек «весит» как один такой платёж?',
+      'Практика: найди в своих записях 3 повторяющихся мелких расхода и посчитай их годовую цену.'
+    ], quiz: [
+      { q: '20 AED в день — это примерно сколько в год?', a: ['2 400 AED', '7 300 AED', '600 AED'], ok: 1, why: '20 × 365 = 7 300 AED.' },
+      { q: 'Цель метода «годовой цены» —', a: ['Запретить все мелкие траты', 'Сравнить привычку с целями в сопоставимом масштабе', 'Посчитать налоги'], ok: 1, why: 'Годовая сумма помогает принять осознанное решение.' },
+      { q: 'Кто автор фразы про «маленькую течь», которая топит корабль?', a: ['Бенджамин Франклин', 'Уоррен Баффетт', 'Неизвестно'], ok: 0, why: 'Франклин, «Путь к богатству» (1758).' }
+    ] },
+    { id: 'w01d5', title: 'Денежный поток месяца', min: 10, body: [
+      'Денежный поток (cash flow) — разница между тем, сколько денег пришло и сколько ушло за период. Это главный показатель здоровья на коротком горизонте: даже при большой зарплате отрицательный поток означает, что ты проедаешь запасы или берёшь в долг.',
+      '## Бюджетный месяц',
+      'Если зарплата приходит в конце месяца, логично считать, что она финансирует СЛЕДУЮЩИЙ месяц. Зарплата 30 ноября — это деньги на декабрь. Так в приложении устроен «бюджетный месяц»: доход конца месяца + все обязательные платежи следующего месяца.',
+      '## Формула',
+      'Поток месяца = поступления − (платежи по долгам + обязательные расходы + личный бюджет + помощь семье).',
+      '> По твоему плану: ожидаемый доход в следующем бюджетном месяце — {nextIncome}, обязательные выплаты — {nextOut}, результат — {nextResult}.',
+      '## Что делать, если поток отрицательный',
+      '- Найти, какие платежи разовые, а какие повторяются.',
+      '- Сдвинуть необязательное, но не пропускать платежи по долгам (штрафы дороже).',
+      '- Если не хватает — сначала искать решения без нового долга; заём — крайняя мера, и считать его надо в годовых (это уровень 2).',
+      'Практика: открой «Планирование → План месяца» и проверь, сходится ли поток следующего месяца.'
+    ], quiz: [
+      { q: 'Зарплата пришла 30 ноября. Какой месяц она финансирует в логике бюджетного месяца?', a: ['Ноябрь', 'Декабрь', 'Январь'], ok: 1, why: 'Доход конца месяца закрывает расходы следующего.' },
+      { q: 'Если денежный поток отрицательный, это значит…', a: ['Всё хорошо', 'Ты тратишь больше, чем поступает, — из запасов или долга', 'Нужно больше кредитов'], ok: 1, why: 'Отрицательный поток всегда кто-то финансирует: запасы или долг.' },
+      { q: 'Что лучше при нехватке денег на платежи?', a: ['Пропустить платёж по кредиту', 'Сократить необязательные траты и сдвинуть желания', 'Взять самый быстрый микрозаём не глядя'], ok: 1, why: 'Просрочки дороги; новый долг — только с расчётом полной стоимости.' }
+    ] },
+    { id: 'w01d6', title: 'Сверка: цифры = реальность', min: 10, body: [
+      'Учёт полезен, только если совпадает с реальностью. Сверка — это сравнение остатков в приложении с остатками в банке и в кошельке.',
+      '## Как сверять',
+      '- Раз в неделю: открой банковское приложение и сравни остатки по каждому счёту и карте.',
+      '- Нашёл расхождение — сначала поищи пропущенную операцию (комиссия, подписка, кешбэк).',
+      '- Не нашёл — сделай корректировку баланса с заметкой «не нашёл причину». Это честнее, чем подгонять.',
+      '## Почему возникают расхождения',
+      'Забытые мелкие траты наличными, банковские комиссии, проценты по карте, курсовые разницы, возвраты. Отдельная ловушка — кредитная карта: выписка (statement) и текущий долг — разные числа. Выписка фиксируется на дату, а покупки после неё уже в текущем долге.',
+      '> Обрати внимание: если долг по карте больше лимита, банк обычно берёт плату за превышение лимита. Проверь условия своей карты.',
+      'Сверка занимает 5–10 минут в неделю и экономит часы разборов в конце месяца.',
+      'Практика: сверь сегодня хотя бы один счёт и одну карту.'
+    ], quiz: [
+      { q: 'Нашёл расхождение и не можешь найти причину. Что делать?', a: ['Игнорировать', 'Сделать корректировку с заметкой', 'Удалить счёт'], ok: 1, why: 'Корректировка с пометкой сохраняет честность учёта.' },
+      { q: 'Выписка по карте и текущий долг —', a: ['Всегда равны', 'Разные числа: выписка на дату, долг — сейчас', 'Выписка всегда больше'], ok: 1, why: 'После даты выписки могут быть новые покупки и платежи.' },
+      { q: 'Как часто разумно сверяться?', a: ['Раз в год', 'Раз в неделю', 'Никогда'], ok: 1, why: 'Еженедельно — быстро и без накопления ошибок.' }
+    ] },
+    { id: 'w01d7', title: 'Обзор недели', min: 10, body: [
+      'Неделя учёта позади. Сегодня — короткий обзор: что ты увидел и что хочешь изменить.',
+      '## Пять вопросов для обзора',
+      '- Какая категория удивила больше всего?',
+      '- Был ли расход, о котором ты пожалел? Почему он случился?',
+      '- Был ли расход, который принёс радость и стоил своих денег?',
+      '- Все ли счета сверены?',
+      '- Какое одно правило ты введёшь на следующую неделю? (например: «кафе — только по выходным»)',
+      '## Главные идеи недели',
+      '- Учёт = видимость, без него нет решений.',
+      '- Заём — не доход; погашение тела долга — не расход на жизнь; проценты — расход.',
+      '- Мелкие регулярные траты считаем в годовом масштабе.',
+      '- Бюджетный месяц: зарплата конца месяца финансирует следующий.',
+      '- Сверка раз в неделю.',
+      '> Твоя стартовая точка: чистый капитал {netWorth}. Запиши её — через 3 месяца сравним.'
+    ], quiz: [
+      { q: 'Что из этого НЕ доход?', a: ['Зарплата', 'Чаевые', 'Полученный заём'], ok: 2, why: 'Заём увеличивает долг.' },
+      { q: '10 AED в день — это в год примерно…', a: ['365 AED', '3 650 AED', '36 500 AED'], ok: 1, why: '10 × 365 = 3 650.' },
+      { q: 'Цель еженедельного обзора —', a: ['Ругать себя', 'Найти одно улучшение и закрепить привычку', 'Удалить старые записи'], ok: 1, why: 'Маленькие улучшения каждую неделю дают большой эффект.' }
+    ] }
+  ],
+  tasks: [
+    { id: 'w01t1', slot: 1, kind: 'case', title: 'Кейс: Самир и «невидимые» 2 000 AED', min: 60, body: [
+      'Самир (вымышленный персонаж) работает в ресторане в Дубае, зарплата 9 500 AED, жильё и транспорт от работодателя. Каждый месяц к 20-му числу деньги заканчиваются, и он берёт займ до зарплаты 1 000 AED с комиссией 100 AED.',
+      'Его месячные траты по выписке: связь 150, перевод семье 4 000, платёж по кредиту 1 800, кафе и доставка 1 350, такси 400, одежда 600, подписки 120, наличные «на мелочи» 900, займ до зарплаты с комиссией 1 100.',
+      '## Задание',
+      '- Раздели траты на 4 типа: расход на жизнь, долг (тело), стоимость денег (проценты/комиссии), семья.',
+      '- Посчитай месячный поток Самира. Где «дыра»?',
+      '- Переведи комиссию займа в годовую ставку: 100 AED за 1 000 на ~10 дней — сколько это примерно в годовых?',
+      '- Предложи 3 изменения, которые за 3 месяца уберут займы до зарплаты. Посчитай эффект каждого.',
+      '## Результат',
+      'Одна страница: таблица трат, поток, твои 3 рекомендации с цифрами. Сохрани в заметке задания.'
+    ], hint: 'Подсказка по ставке: 10% за 10 дней ≈ 365% годовых без учёта капитализации (10% × 36,5).' },
+    { id: 'w01t2', slot: 2, kind: 'calc', title: 'Аудит своих 30 дней', min: 60, body: [
+      'Работаем на твоих реальных данных из книги — они не покидают устройство.',
+      '## Шаги',
+      '- Возьми выписки банка и карт за последние 30 дней. Убедись, что все операции внесены в приложение.',
+      '- Проставь категории каждой записи. Отметь заметкой 5 самых «спорных» трат.',
+      '- Открой «Статистика → Сводка расходов» и выпиши: топ-3 категории, сумму процентов и комиссий, сумму погашений долга.',
+      '- Посчитай долю каждого из 4 типов: жизнь / долг / стоимость денег / семья.',
+      '- Сверь остатки всех счетов с банком.',
+      '> Сейчас в книге: собственные средства {own}, долг {debt}, план обязательных выплат следующего месяца {nextOut}.',
+      '## Результат',
+      'Заметка: 4 доли в %, топ-3 категории, одно решение на следующий месяц.'
+    ] }
+  ]
+});
+
+</script>
+<script>
+/* Академия · неделя 2 · Бюджет: решение заранее */
+AFAcademy.addWeek({
+  n: 2,
+  lessons: [
+    { id: 'w02d1', title: 'Что такое бюджет на самом деле', min: 10, body: [
+      'Бюджет — это не таблица запретов, а решение, принятое заранее, пока ты спокоен. В момент покупки решения принимаются эмоциями; бюджет переносит их в момент, когда ты думаешь головой.',
+      '## Три уровня бюджета',
+      '- Обязательства: долги, семья, обязательные расходы. Их нельзя «не платить».',
+      '- Жизнь: личный бюджет на еду вне работы, связь, одежду, отдых.',
+      '- Будущее: резерв, цели, досрочное погашение долгов.',
+      'Хороший бюджет начинается с обязательств, затем будущее, и только потом — жизнь. Плохой — наоборот: сначала живём, будущему достаётся остаток, а его обычно нет.',
+      '## Бюджет — это гипотеза',
+      'Первый бюджет всегда неточен. Это нормально: через месяц учёт покажет, где ты ошибся, и ты поправишь план. Через 3 месяца бюджет станет точным.',
+      '> Твой план на следующий бюджетный месяц: поступления {nextIncome}, обязательства {nextOut}. Результат {nextResult} — это и есть деньги для будущего или запас.'
+    ], quiz: [
+      { q: 'В каком порядке правильно распределять доход?', a: ['Жизнь → обязательства → будущее', 'Обязательства → будущее → жизнь', 'Будущее → жизнь → обязательства'], ok: 1, why: 'Сначала то, что нельзя не платить, затем себе в будущее, затем на жизнь.' },
+      { q: 'Первый бюджет оказался неточным. Что это значит?', a: ['Бюджет не работает', 'Нормальная ситуация — уточняем по учёту', 'Нужно бросить'], ok: 1, why: 'Бюджет — гипотеза, которую проверяет учёт.' },
+      { q: 'Главная польза бюджета —', a: ['Решения принимаются заранее, а не эмоционально', 'Можно тратить больше', 'Банк даёт кредит'], ok: 0, why: 'Решение заранее защищает от импульсивных трат.' }
+    ] },
+    { id: 'w02d2', title: 'Правило 50/30/20', min: 10, body: [
+      'Правило 50/30/20 популяризировали Элизабет Уоррен и Амелия Уоррен Тьяги в книге «All Your Worth» (2005). Чистый доход делится на три части:',
+      '- 50% — потребности (жильё, еда, транспорт, минимальные платежи по долгам);',
+      '- 30% — желания (кафе, хобби, путешествия);',
+      '- 20% — сбережения и досрочное погашение долгов.',
+      '## Применим к твоему доходу',
+      '> Базовая зарплата в книге {salary}. По 50/30/20: потребности {s50}, желания {s30}, будущее {s20}.',
+      '## Ограничения',
+      'Правило создано для типичной американской семьи. У тебя другая структура: работодатель даёт жильё и часть питания, зато есть долги и помощь родителям. Поэтому правило — ориентир, а не закон.',
+      'При высоких долгах разумнее схема вроде 70/10/20 или даже временно 80/5/15: больше на обязательства и погашение, меньше на желания — пока не закроешь дорогие долги.',
+      'Главное в 50/30/20 — идея: доля «на будущее» должна быть заранее определена, а не «что останется».'
+    ], quiz: [
+      { q: 'Кто популяризировал правило 50/30/20?', a: ['Уоррен Баффетт', 'Элизабет Уоррен и Амелия Уоррен Тьяги', 'Роберт Кийосаки'], ok: 1, why: 'Книга «All Your Worth», 2005.' },
+      { q: 'Доход 10 000 AED. Сколько на будущее по правилу?', a: ['500', '2 000', '3 000'], ok: 1, why: '20% от 10 000 = 2 000.' },
+      { q: 'Почему правило — ориентир, а не закон?', a: ['Оно неверное', 'Структура расходов у всех разная', 'Оно только для бизнеса'], ok: 1, why: 'Важна идея фиксированной доли на будущее, а пропорции подбираешь под себя.' }
+    ] },
+    { id: 'w02d3', title: 'Бюджет с нуля', min: 10, body: [
+      'Бюджет с нуля (zero-based budgeting) — каждому дирхаму дохода назначается «работа», пока нераспределённым не останется ноль. Ноль не означает «потратить всё»: накопления и погашение долгов — тоже работа.',
+      '## Как составить',
+      '- Запиши ожидаемый доход месяца (пессимистичный вариант!).',
+      '- Распредели по строкам: долги → семья → личный бюджет → резерв/цели.',
+      '- Доход − все строки = 0. Если больше нуля — назначь остаток на цель. Если меньше — режь строки.',
+      '## Почему пессимистичный доход',
+      'Если планировать на максимум, а придёт меньше, бюджет развалится. Если планировать на минимум, а придёт больше, разница — приятный бонус на досрочное погашение.',
+      '> Твой диапазон дохода: от {salaryLow} до {salary}. Попробуй составить бюджет на {salaryLow}: что тогда придётся сдвинуть?',
+      'В Akbar Finance это делается через «План месяца»: все платежи + личный бюджет + семья; результат должен быть ≥ 0.'
+    ], quiz: [
+      { q: 'Ноль в бюджете с нуля означает…', a: ['Потратить все деньги', 'Каждый дирхам распределён, включая накопления', 'Не тратить ничего'], ok: 1, why: 'Ноль — это «нераспределённого не осталось».' },
+      { q: 'На какой доход лучше планировать бюджет?', a: ['На максимальный', 'На пессимистичный', 'На средний за 5 лет'], ok: 1, why: 'Сюрприз вверх приятнее, чем дыра в плане.' },
+      { q: 'Остаток после всех строк больше нуля. Что делать?', a: ['Потратить', 'Назначить на цель или погашение', 'Ничего'], ok: 1, why: 'Нераспределённые деньги обычно растворяются в мелочах.' }
+    ] },
+    { id: 'w02d4', title: 'Сначала заплати себе', min: 10, body: [
+      'Принцип «сначала заплати себе» известен по книге Джорджа Клейсона «Самый богатый человек в Вавилоне» (1926): «часть всего, что ты зарабатываешь, принадлежит тебе». Смысл: откладывать в начале месяца, а не в конце.',
+      '## Почему это работает',
+      'Если откладывать «что останется», почти всегда остаётся ноль: расходы растут до уровня дохода. Если отложить сразу, ты живёшь на остаток и быстро адаптируешься.',
+      '## Как применить с долгами',
+      'Когда есть дорогие долги, «заплатить себе» — это в первую очередь погасить их сверх минимума: каждый закрытый дирхам долга под высокий процент — гарантированная экономия. Но маленький резерв (хотя бы 1 000–2 000 AED) нужен даже во время погашения долгов, чтобы любая неожиданность не превращалась в новый заём.',
+      '## Автоматизация',
+      'Лучше всего, когда это происходит без силы воли: в день зарплаты — автоматический перевод в резерв.',
+      '> Сейчас в резерве и накоплениях: {saved}. Какая сумма в день зарплаты была бы для тебя ощутимой, но безболезненной?'
+    ], quiz: [
+      { q: 'Когда откладывать по принципу «сначала заплати себе»?', a: ['В конце месяца из остатка', 'Сразу после получения дохода', 'Раз в год'], ok: 1, why: 'В начале — пока деньги не растворились в расходах.' },
+      { q: 'Если есть долг под высокий процент, «заплатить себе» в первую очередь значит…', a: ['Купить акции', 'Погасить дорогой долг сверх минимума, сохранив маленький резерв', 'Ничего не делать'], ok: 1, why: 'Досрочное погашение дорогого долга — гарантированная «доходность».' },
+      { q: 'Из какой книги известен этот принцип?', a: ['«Самый богатый человек в Вавилоне»', '«Капитал»', '«Война и мир»'], ok: 0, why: 'Джордж Клейсон, 1926.' }
+    ] },
+    { id: 'w02d5', title: 'Конверт: личный бюджет 500 AED', min: 10, body: [
+      'Метод конвертов: на каждую категорию трат выделяется «конверт» с фиксированной суммой. Пустой конверт — траты по категории прекращаются до следующего месяца.',
+      '## Личный бюджет как обязательство',
+      'Твой личный бюджет {budget} стоит в списке обязательных расходов месяца — рядом с кредитами. Это важный сдвиг: ты не «тратишь, сколько получится», а заранее выделяешь сумму, как платёж самому себе на жизнь.',
+      '## Остаток → накопления',
+      'Если к концу месяца в конверте что-то осталось — это не «можно потратить», а «уже накоплено». В приложении в конце месяца появляется предложение перевести остаток в накопления; перевод создаётся только после твоего подтверждения.',
+      '## Перерасход',
+      'Если конверт опустел раньше — не бери из других конвертов без решения. Спроси: это разовая ситуация или бюджет занижен? Если занижен — поменяй сумму на следующий месяц, но за счёт другой строки, а не долга.',
+      '> В этом месяце потрачено из личного бюджета {budgetSpent} из {budget}.'
+    ], quiz: [
+      { q: 'Что делать с остатком личного бюджета в конце месяца?', a: ['Потратить в последний день', 'Перевести в накопления', 'Ничего'], ok: 1, why: 'Остаток — это уже сэкономленные деньги.' },
+      { q: 'Конверт опустел 20-го числа. Лучшее действие —', a: ['Взять займ', 'Разобраться, разовая ли ситуация; при необходимости пересмотреть сумму за счёт другой строки', 'Использовать кредитку'], ok: 1, why: 'Перерасход — сигнал для анализа, а не повод для долга.' },
+      { q: 'Почему личный бюджет стоит в обязательных расходах?', a: ['Чтобы сумма была выделена заранее', 'Так требует банк', 'Случайно'], ok: 0, why: 'Это решение заранее, как платёж самому себе.' }
+    ] },
+    { id: 'w02d6', title: 'Нерегулярные расходы', min: 10, body: [
+      'Большинство «неожиданных» расходов на самом деле ожидаемые — просто нерегулярные: подарки к праздникам, билеты домой, ремонт телефона, медицинские расходы, продление документов.',
+      '## Фонды для нерегулярных трат',
+      'Сделай список трат, которые случаются раз в несколько месяцев. Оцени годовую сумму и раздели на 12 — это ежемесячный взнос в отдельный фонд.',
+      '- Билеты домой: 2 400 AED в год → 200 в месяц.',
+      '- Подарки: 1 200 AED в год → 100 в месяц.',
+      '- Документы и визы: 600 AED в год → 50 в месяц.',
+      'Итого 350 AED в месяц — и «неожиданности» перестают ломать бюджет.',
+      '## Отличие от резервного фонда',
+      'Резервный фонд — на действительно непредсказуемое (потеря работы, болезнь). Фонд нерегулярных трат — на предсказуемое, но редкое. Не смешивай их, иначе резерв будет таять на подарки.',
+      'В приложении для этого удобно создать цель («Поездка домой») и делать в неё взносы.'
+    ], quiz: [
+      { q: 'Подарки на 1 800 AED в год. Сколько откладывать в месяц?', a: ['100', '150', '180'], ok: 1, why: '1 800 / 12 = 150.' },
+      { q: 'Чем фонд нерегулярных трат отличается от резерва?', a: ['Ничем', 'Он для предсказуемых редких трат; резерв — для непредсказуемого', 'Резерв только для бизнеса'], ok: 1, why: 'Смешивание приводит к тому, что резерв тает.' },
+      { q: 'Пример нерегулярного, но ожидаемого расхода —', a: ['Билеты домой раз в год', 'Ежедневный кофе', 'Потеря работы'], ok: 0, why: 'Его можно запланировать заранее.' }
+    ] },
+    { id: 'w02d7', title: 'Когда бюджет ломается', min: 10, body: [
+      'Бюджеты ломаются у всех. Разница между успешными и неуспешными людьми — не в том, что у первых бюджет не ломается, а в том, что они не бросают систему после первой ошибки.',
+      '## Три частые причины',
+      '- Бюджет нереалистичен: заложены желаемые, а не реальные траты. Решение — опираться на учёт последних 2–3 месяцев.',
+      '- Нет буфера: любая мелочь выводит в минус. Решение — строка «прочее» 5–10% от личного бюджета.',
+      '- Эффект «всё равно уже нарушил»: перерасход в одной категории → «гулять так гулять». Это ловушка; один плохой день не отменяет месяц.',
+      '## Правило восстановления',
+      'Нарушил бюджет — запиши, почему, и реши одно: компенсировать в этом месяце или скорректировать план на следующий. Без самобичевания.',
+      '## Итоги недели',
+      '- Бюджет = решения заранее; порядок: обязательства → будущее → жизнь.',
+      '- 50/30/20 — ориентир, при долгах доли смещаются к погашению.',
+      '- Бюджет с нуля на пессимистичный доход.',
+      '- Личный бюджет как конверт; остаток → накопления.'
+    ], quiz: [
+      { q: 'Что делать после перерасхода?', a: ['Бросить бюджет', 'Записать причину и решить: компенсировать или скорректировать план', 'Потратить ещё больше'], ok: 1, why: 'Система важнее одного месяца.' },
+      { q: 'Буфер «прочее» нужен, чтобы…', a: ['Мелкие неожиданности не ломали бюджет', 'Банк дал кредит', 'Платить налоги'], ok: 0, why: '5–10% буфера поглощают мелкие отклонения.' },
+      { q: 'На что опираться при составлении бюджета?', a: ['На желаемые траты', 'На учёт последних 2–3 месяцев', 'На советы друзей'], ok: 1, why: 'Реальные данные делают бюджет реалистичным.' }
+    ] }
+  ],
+  tasks: [
+    { id: 'w02t1', slot: 1, kind: 'case', title: 'Кейс: два бюджета с одной зарплатой', min: 60, body: [
+      'Лейла и Тимур (вымышленные) получают по 11 000 AED. У обоих жильё от работодателя.',
+      'Лейла: в день зарплаты переводит 1 500 в резерв, 2 000 — на досрочное погашение кредита, 4 000 — родителям; на жизнь остаётся 3 500, из них 500 — личный конверт на развлечения.',
+      'Тимур: платит минимальные платежи по двум картам (1 200), отправляет родителям, «сколько получится» (в среднем 3 000), остальное тратит; к концу месяца обычно берёт займ 1 000 AED с комиссией 100.',
+      '## Задание',
+      '- Построй для обоих бюджет по строкам: обязательства / будущее / жизнь. Посчитай доли.',
+      '- Прикинь, что будет с долгами каждого через 6 месяцев (допущения запиши явно).',
+      '- Сколько Тимур платит в год только комиссий за займы до зарплаты?',
+      '- Предложи Тимуру план перехода к системе Лейлы за 3 месяца — по шагам, с суммами.',
+      '## Результат',
+      'Таблица двух бюджетов, расчёт 6 месяцев, план из 3 шагов.'
+    ] },
+    { id: 'w02t2', slot: 2, kind: 'plan', title: 'Твой бюджет с нуля на следующий месяц', min: 60, body: [
+      'Составляем реальный бюджет на твоих данных.',
+      '## Шаги',
+      '- Открой «Планирование → План месяца» на следующий бюджетный месяц и выпиши все обязательные платежи.',
+      '- Возьми пессимистичный доход {salaryLow} и базовый {salary}. Составь бюджет с нуля для обоих.',
+      '- Для пессимистичного: что сдвигается и в каком порядке? Какие платежи нельзя трогать никогда?',
+      '- Определи строку «будущее»: резерв или досрочное погашение — и почему.',
+      '- Проверь, что личный бюджет {budget} стоит в списке обязательств, и реши, что делать с остатком.',
+      '> Подсказка: по плану книги в следующем месяце обязательства {nextOut} при поступлениях {nextIncome}.',
+      '## Результат',
+      'Два бюджета (пессимистичный и базовый), порядок приоритетов, одна строка «будущее» с суммой.'
+    ] }
+  ]
+});
+
+</script>
+<script>
+/* Академия · неделя 3 · Личный финансовый отчёт */
+AFAcademy.addWeek({
+  n: 3,
+  lessons: [
+    { id: 'w03d1', title: 'Активы и обязательства', min: 10, body: [
+      'Компании ведут баланс: слева — что у них есть (активы), справа — кому они должны (обязательства) и сколько принадлежит владельцам (капитал). Личный баланс устроен так же.',
+      '## Активы',
+      '- Деньги на счетах и наличные.',
+      '- Резерв и накопления.',
+      '- Деньги, которые должны тебе (дебиторская задолженность) — по реальной вероятности возврата.',
+      '- Инвестиции и имущество — по цене, за которую реально продашь сегодня, а не за которую купил.',
+      '## Обязательства',
+      '- Кредиты, кредитные карты, рассрочки, займы.',
+      '- Любой долг, который придётся вернуть.',
+      '## Чего нет в балансе',
+      'Кредитный лимит — не актив. Это возможность взять долг. Будущая зарплата — тоже не актив в балансе (это поток, его видно в плане доходов).',
+      '> В твоей книге сейчас: активы (собственные средства) {own}, обязательства {debt}.'
+    ], quiz: [
+      { q: 'Неиспользованный кредитный лимит — это…', a: ['Актив', 'Не актив — это возможность взять долг', 'Капитал'], ok: 1, why: 'Лимит — чужие деньги, доступные под процент.' },
+      { q: 'Телефон купили за 4 000, продать можно за 1 500. Как учесть в балансе?', a: ['4 000', '1 500 или не учитывать вовсе', '0 — всегда'], ok: 1, why: 'Активы — по реалистичной цене продажи; мелкие вещи часто не учитывают.' },
+      { q: 'Деньги, которые тебе должен друг, — это…', a: ['Обязательство', 'Актив (с учётом вероятности возврата)', 'Доход'], ok: 1, why: 'Это дебиторская задолженность; при возврате — не доход, а возврат актива.' }
+    ] },
+    { id: 'w03d2', title: 'Чистый капитал', min: 10, body: [
+      'Чистый капитал (net worth) = активы − обязательства. Это главный «счёт» в финансовой игре: он показывает, сколько у тебя останется, если продать всё и вернуть все долги.',
+      '> Твой чистый капитал сейчас: {netWorth}.',
+      '## Отрицательный капитал — это не приговор',
+      'Отрицательный капитал часто встречается после крупных кредитов, учёбы или помощи семье. Важно не значение сегодня, а траектория: растёт ли он от месяца к месяцу.',
+      '## Как растёт капитал',
+      'Капитал растёт, когда ты гасишь тело долга, откладываешь, инвестируешь. Не растёт, когда ты платишь проценты, комиссии и тратишь на потребление. Поэтому каждый дирхам процентов — это прямой минус к капиталу.',
+      '## Ежемесячная точка',
+      'Записывай капитал раз в месяц в один и тот же день. Через полгода у тебя будет график, который мотивирует сильнее любых цитат.',
+      'В приложении график чистого капитала есть в «Статистике».'
+    ], quiz: [
+      { q: 'Активы 2 000, долги 10 000. Чистый капитал?', a: ['12 000', '−8 000', '8 000'], ok: 1, why: '2 000 − 10 000 = −8 000.' },
+      { q: 'Что важнее для оценки прогресса?', a: ['Значение капитала сегодня', 'Траектория — растёт ли капитал', 'Размер кредитного лимита'], ok: 1, why: 'Прогресс виден в динамике.' },
+      { q: 'Ты погасил 2 000 тела долга со своих денег. Как изменится капитал?', a: ['Вырастет на 2 000', 'Не изменится', 'Упадёт на 2 000'], ok: 1, why: 'Активы −2 000 и обязательства −2 000: капитал не меняется. Растёт он от того, что ты не потратил, а направил на погашение доход.' }
+    ] },
+    { id: 'w03d3', title: 'Ликвидность', min: 10, body: [
+      'Ликвидность — способность быстро и без потерь превратить актив в деньги. Деньги на текущем счёте — максимально ликвидны. Квартира — неликвидна: продажа займёт месяцы.',
+      '## Почему ликвидность важна',
+      'Можно иметь положительный капитал и всё равно не суметь заплатить по кредиту завтра — если всё вложено в неликвидное. Платежи требуют живых денег на дату.',
+      '## Кассовый разрыв',
+      'Кассовый разрыв — момент, когда платёж по графику больше, чем есть на счетах. Он возникает даже при нормальном годовом балансе, если зарплата приходит позже платежа.',
+      '> Прогноз в приложении («Статистика → Прогноз») показывает, есть ли кассовый разрыв в ближайшие недели.',
+      '## Правило',
+      'Держи на текущем счёте сумму ближайших обязательных платежей до следующей зарплаты плюс небольшой буфер. Если её нет — заранее решай, какой платёж сдвигается и как (переговоры с банком дешевле просрочки).'
+    ], quiz: [
+      { q: 'Самый ликвидный актив —', a: ['Квартира', 'Деньги на текущем счёте', 'Машина'], ok: 1, why: 'Их можно использовать сразу.' },
+      { q: 'Кассовый разрыв — это…', a: ['Когда денег на дату платежа не хватает', 'Когда капитал отрицательный', 'Когда банк закрыт'], ok: 0, why: 'Это проблема времени, а не только суммы.' },
+      { q: 'Сколько держать на текущем счёте?', a: ['Ноль', 'Сумму платежей до следующей зарплаты + буфер', 'Весь резерв'], ok: 1, why: 'Так платежи не зависят от удачи.' }
+    ] },
+    { id: 'w03d4', title: 'Отчёт о движении денег', min: 10, body: [
+      'Компании, кроме баланса, публикуют отчёт о движении денежных средств (cash flow statement). Его можно адаптировать для себя — в три раздела.',
+      '## Операционный поток',
+      'Доходы от работы минус расходы на жизнь и помощь семье. Это «двигатель»: если он отрицательный, ничего другое не спасёт.',
+      '## Долговой поток',
+      'Получено займов минус погашено долгов. Если ты гасишь больше, чем берёшь, — поток отрицательный, и это хорошо: ты уменьшаешь долг.',
+      '## Поток «будущего»',
+      'Взносы в резерв, накопления, инвестиции.',
+      '## Чтение отчёта',
+      'Здоровая картина: операционный поток положительный и он финансирует погашение долгов и накопления. Тревожная: операционный поток отрицательный, а дыра закрывается новыми займами.',
+      '> В твоём плане на следующий месяц новые займы (если есть) отражены отдельно — это долговой поток, а не доход. Проверь план месяца: из чего финансируется результат {nextResult}?'
+    ], quiz: [
+      { q: 'Операционный поток отрицательный, долговой — положительный (берёшь займы). Это…', a: ['Здоровая картина', 'Тревожная: жизнь финансируется долгом', 'Нейтрально'], ok: 1, why: 'Так долг растёт месяц за месяцем.' },
+      { q: 'Погашение долга в каком разделе?', a: ['Операционный', 'Долговой', 'Будущее'], ok: 1, why: 'Это движение по долгам.' },
+      { q: 'Цель для отчёта —', a: ['Операционный поток > 0 и финансирует погашение и накопления', 'Максимум займов', 'Ноль во всех разделах'], ok: 0, why: 'Тогда система устойчива.' }
+    ] },
+    { id: 'w03d5', title: 'Ключевые коэффициенты', min: 10, body: [
+      'Финансовые аналитики оценивают компании по коэффициентам. Для личных финансов достаточно трёх.',
+      '## Долговая нагрузка (DTI)',
+      'Ежемесячные платежи по долгам / ежемесячный доход. Банки часто считают нагрузку выше 40–50% высокой (пороги зависят от банка и страны).',
+      '> Твоя долговая нагрузка в следующем месяце по плану: {dti}.',
+      '## Норма сбережений',
+      'Сколько процентов дохода уходит в резерв, накопления и досрочное погашение. 10% — хорошее начало, 20% — сильный результат.',
+      '## Месяцы резерва',
+      'Резерв / обязательные расходы месяца. Цель — 3–6 месяцев. С долгами разумно начать с одного месяца, а затем наращивать.',
+      '## Как использовать',
+      'Записывай коэффициенты раз в месяц рядом с чистым капиталом. Один коэффициент — снимок; три коэффициента за полгода — история.'
+    ], quiz: [
+      { q: 'Платежи по долгам 3 000, доход 10 000. DTI?', a: ['3%', '30%', '300%'], ok: 1, why: '3 000 / 10 000 = 30%.' },
+      { q: 'Цель резерва в месяцах обязательных расходов —', a: ['0,5', '3–6', '24'], ok: 1, why: 'Классический ориентир 3–6 месяцев.' },
+      { q: 'Досрочное погашение долга входит в норму сбережений?', a: ['Да, это вклад в будущее', 'Нет', 'Только для ипотеки'], ok: 0, why: 'Это увеличивает капитал так же, как накопления.' }
+    ] },
+    { id: 'w03d6', title: 'Краткосрочный и долгосрочный долг', min: 10, body: [
+      'Не все долги одинаковы. Краткосрочные (кредитные карты, займы до зарплаты, рассрочки) обычно дороже и требуют денег скоро. Долгосрочные (персональный кредит на годы) — дешевле в год и с понятным графиком.',
+      '> У тебя: краткосрочные {short} ({shortPct} долга), долгосрочные {long}.',
+      '## Почему краткосрочные опаснее',
+      '- Высокая стоимость: комиссии и проценты карт и микрозаймов в пересчёте на год обычно намного выше, чем у банковского кредита.',
+      '- Короткие сроки: их надо гасить или перекредитовывать постоянно — легко попасть в круг «занял — вернул — занял».',
+      '- Влияние на кредитную историю: превышение лимита и просрочки по картам заметны сразу.',
+      '## Типичная стратегия',
+      'Сначала закрыть краткосрочные долги (особенно самые дорогие), продолжая платить по долгосрочному по графику. Затем — резерв. Затем — досрочное погашение долгосрочного или инвестиции, в зависимости от ставки. Подробно об этом — на уровне 2.'
+    ], quiz: [
+      { q: 'Какой долг обычно дороже в пересчёте на год?', a: ['Займ до зарплаты', 'Долгосрочный банковский кредит', 'Одинаково'], ok: 0, why: 'Комиссии микрозаймов в годовых очень высоки.' },
+      { q: 'Типичная очередность —', a: ['Сначала долгосрочный кредит', 'Сначала краткосрочные дорогие долги, по долгосрочному — по графику', 'Не гасить ничего'], ok: 1, why: 'Дорогие и короткие долги несут больше риска.' },
+      { q: 'Круг «занял — вернул — занял» опасен, потому что…', a: ['Каждый круг стоит комиссию, а долг не уменьшается', 'Это запрещено', 'Это бесплатно'], ok: 0, why: 'Ты платишь за возможность стоять на месте.' }
+    ] },
+    { id: 'w03d7', title: 'Отчёт на одной странице', min: 10, body: [
+      'Итог недели — твой личный финансовый отчёт, который помещается на одну страницу. Аналитики называют это «executive summary»: всё главное, без лишнего.',
+      '## Структура',
+      '- Баланс: активы, обязательства, чистый капитал.',
+      '- Поток месяца: операционный, долговой, будущее.',
+      '- Коэффициенты: долговая нагрузка, норма сбережений, месяцы резерва.',
+      '- Одна главная цель месяца и одна главная угроза.',
+      '> Твои цифры сейчас: капитал {netWorth}, долг {debt}, краткосрочный долг {short}.',
+      '## Итоги недели',
+      '- Баланс = активы − обязательства; лимит — не актив.',
+      '- Важна траектория капитала.',
+      '- Ликвидность и кассовые разрывы — отдельная от капитала проблема.',
+      '- Три коэффициента раз в месяц.',
+      '- Краткосрочные долги — первыми.'
+    ], quiz: [
+      { q: 'Что НЕ входит в отчёт на одной странице?', a: ['Чистый капитал', 'Список всех покупок за месяц', 'Долговая нагрузка'], ok: 1, why: 'Отчёт — про главное.' },
+      { q: 'Капитал вырос с −50 000 до −45 000 за полгода. Это…', a: ['Провал', 'Хорошая траектория', 'Неважно'], ok: 1, why: '+5 000 за полгода — реальный прогресс.' },
+      { q: 'Главная угроза в отчёте нужна, чтобы…', a: ['Пугаться', 'Заранее планировать действия', 'Показать банку'], ok: 1, why: 'Названная угроза — управляемая угроза.' }
+    ] }
+  ],
+  tasks: [
+    { id: 'w03t1', slot: 1, kind: 'calc', title: 'Твой баланс и отчёт о движении денег', min: 60, body: [
+      'Строим твой личный отчёт по данным книги.',
+      '## Шаги',
+      '- Выпиши все активы с реалистичной оценкой и все обязательства (из раздела «Счета»).',
+      '- Посчитай чистый капитал и сравни с приложением: {netWorth}.',
+      '- Для следующего бюджетного месяца раздели план на три потока: операционный, долговой (включая новые займы, если они в плане), будущее.',
+      '- Посчитай три коэффициента: долговую нагрузку, норму сбережений, месяцы резерва.',
+      '- Напиши «главную цель» и «главную угрозу» на ближайшие 2 месяца.',
+      '## Результат',
+      'Отчёт на одной странице. Сохрани текст в заметке задания — через месяц сравнишь.'
+    ] },
+    { id: 'w03t2', slot: 2, kind: 'case', title: 'Кейс: одинаковый доход — разный капитал', min: 60, body: [
+      'Азиз и Рустам (вымышленные) пять лет работают в одной компании с доходом 12 000 AED.',
+      'Азиз: капитал +45 000 AED, долгов нет, резерв 18 000, инвестиции 27 000. Рустам: капитал −30 000 AED, две кредитки на лимите, займы до зарплаты, телефон и машина в рассрочку.',
+      '## Задание',
+      '- Восстанови, какие решения (примерно) могли привести к разнице в 75 000 AED. Используй понятия: поток, проценты, ликвидность, поведение.',
+      '- Посчитай: если Рустам переплачивает 600 AED в месяц процентами и комиссиями — сколько это за 5 лет без учёта сложного процента?',
+      '- Составь Рустаму отчёт на одной странице (придумай правдоподобные цифры) и план на 12 месяцев.',
+      '## Результат',
+      'Список 5 решений, расчёт переплаты, план на год.'
+    ], hint: '600 × 60 месяцев = 36 000 AED — почти половина разрыва.' }
+  ]
+});
+
+</script>
+<script>
+/* Академия · неделя 4 · Поведение и привычки */
+AFAcademy.addWeek({
+  n: 4,
+  lessons: [
+    { id: 'w04d1', title: 'Ментальный учёт', min: 10, body: [
+      'Экономист Ричард Талер (Нобелевская премия по экономике 2017 года) описал «ментальный учёт» (mental accounting): люди раскладывают деньги по воображаемым кошелькам и относятся к ним по-разному, хотя дирхам — всегда дирхам.',
+      '## Примеры',
+      '- Бонус или чаевые тратятся легче, чем зарплата: «это же лишние деньги».',
+      '- Человек держит накопления под 3% и одновременно долг по карте под 30% — потому что «накопления трогать нельзя».',
+      '- Возврат долга от друга воспринимается как «подарок» и тратится, хотя это возврат твоих собственных денег.',
+      '## Как использовать во благо',
+      'Ментальные «кошельки» можно направить на пользу: отдельный счёт для резерва, конверт личного бюджета, цель «Поездка домой». Плохо, когда кошельки мешают видеть общую картину: например, держать сбережения при дорогом долге без причины.',
+      '> Подумай: возврат долга тебе (в твоём плане доходов он записан отдельно от зарплаты) — куда он пойдёт? Решение лучше принять заранее.'
+    ], quiz: [
+      { q: 'Ментальный учёт — это…', a: ['Учёт в уме без записи', 'Склонность делить деньги на «кошельки» и относиться к ним по-разному', 'Бухгалтерский стандарт'], ok: 1, why: 'Понятие Ричарда Талера.' },
+      { q: 'Держать накопления под 3% при долге под 30% обычно…', a: ['Оптимально', 'Дорого: разница в ставках работает против тебя (кроме маленького резерва)', 'Не влияет'], ok: 1, why: 'Минимальный резерв нужен, но большие сбережения при дорогом долге стоят денег.' },
+      { q: 'Возврат долга тебе — это…', a: ['Подарок', 'Возврат твоих собственных денег', 'Зарплата'], ok: 1, why: 'Это не новый доход.' }
+    ] },
+    { id: 'w04d2', title: 'Неприятие потерь', min: 10, body: [
+      'Даниэль Канеман и Амос Тверски в теории перспектив (1979) показали: потери ощущаются сильнее равных по размеру выигрышей — по их оценкам, примерно вдвое.',
+      '## Как это влияет на деньги',
+      '- Мы держимся за неудачные решения («уже вложил — жалко бросать») — эффект невозвратных затрат.',
+      '- Мы боимся зафиксировать убыток и продолжаем платить за ненужную подписку или вещь.',
+      '- Мы откладываем неприятное — например, честный взгляд на сумму долга.',
+      '## Как противостоять',
+      '- Задавай вопрос «что бы я решил, если бы начинал с нуля сегодня?» — прошлые затраты не должны влиять на решение.',
+      '- Переформулируй: не «потеряю удовольствие», а «получу 5 475 AED в год на цель».',
+      '- Смотри на цифры регулярно: страх перед ними сильнее, чем сами цифры.',
+      '> Сегодняшнее упражнение: найди одну трату или подписку, которую ты продолжаешь только из-за «уже заплатил».'
+    ], quiz: [
+      { q: 'Согласно Канеману и Тверски, потери ощущаются…', a: ['Слабее выигрышей', 'Примерно вдвое сильнее равных выигрышей', 'Так же'], ok: 1, why: 'Это ядро неприятия потерь.' },
+      { q: 'Эффект невозвратных затрат —', a: ['Продолжать из-за уже вложенного', 'Возврат товара', 'Налоговый вычет'], ok: 0, why: 'Прошлые затраты не должны управлять будущими решениями.' },
+      { q: 'Полезный вопрос против этих ловушек —', a: ['«Сколько я уже потратил?»', '«Что бы я решил, начиная с нуля сегодня?»', '«Что скажут другие?»'], ok: 1, why: 'Он отсекает прошлые затраты.' }
+    ] },
+    { id: 'w04d3', title: 'Предпочтение «сейчас»', min: 10, body: [
+      'Люди систематически переоценивают удовольствие сейчас по сравнению с пользой в будущем. В экономике это называют гиперболическим дисконтированием или смещением к настоящему (present bias).',
+      '## Признаки',
+      '- «Начну откладывать со следующего месяца» — каждый месяц.',
+      '- Рассрочка «всего 99 AED в месяц» кажется дешевле, чем 1 188 AED сразу.',
+      '- Займ на 10 дней кажется мелочью, хотя в годовых он стоит сотни процентов.',
+      '## Как обмануть свой мозг',
+      '- Обязательства заранее: автоматический перевод в день зарплаты, когда «будущий ты» решает за «текущего».',
+      '- Сделай будущее конкретным: цель с фото, суммой и датой.',
+      '- Переводи «маленькие платежи» в общую сумму и в годовую стоимость.',
+      '> Твоя цель в приложении с ближайшей датой — сделай её конкретной: сумма, дата, ежемесячный взнос.'
+    ], quiz: [
+      { q: 'Рассрочка 99 AED × 12 месяцев — это…', a: ['99 AED', '1 188 AED (плюс возможные комиссии)', '12 AED'], ok: 1, why: '99 × 12 = 1 188.' },
+      { q: 'Лучшее средство против смещения к настоящему —', a: ['Сила воли', 'Автоматические решения заранее', 'Кредитная карта'], ok: 1, why: 'Автоматизация не требует силы воли.' },
+      { q: '«Начну со следующего месяца» — признак…', a: ['Предпочтения «сейчас»', 'Хорошего планирования', 'Инфляции'], ok: 0, why: 'Будущее всегда кажется удобнее для трудных решений.' }
+    ] },
+    { id: 'w04d4', title: 'Якоря и «скидки»', min: 10, body: [
+      'Тверски и Канеман (1974) описали эффект якоря: первое увиденное число влияет на оценку, даже если оно случайное. Магазины используют это постоянно.',
+      '## Как работают якоря в покупках',
+      '- «Было 2 000, стало 1 200» — якорь 2 000 делает 1 200 «выгодной». Но вопрос не в скидке, а в том, нужна ли вещь за 1 200.',
+      '- Дорогая модель рядом с нужной делает нужную «разумной».',
+      '- «Платёж всего 150 в месяц» — якорь на маленьком числе скрывает итоговую цену.',
+      '## Правило',
+      'Сравнивай с твоим бюджетом и целями, а не с «прежней ценой». Скидка 40% на ненужную вещь — это расход 60%, а не экономия 40%.',
+      '## Чек-лист перед покупкой',
+      '- Купил бы я это без скидки?',
+      '- Что я НЕ смогу сделать с этими деньгами?',
+      '- Помещается ли покупка в личный бюджет {budget} этого месяца?'
+    ], quiz: [
+      { q: 'Скидка 40% на вещь, которая не нужна, — это…', a: ['Экономия 40%', 'Расход 60% цены', 'Бесплатно'], ok: 1, why: 'Ты тратишь деньги, а не экономишь.' },
+      { q: 'Эффект якоря —', a: ['Первое число влияет на оценку', 'Привычка к одному банку', 'Тип кредита'], ok: 0, why: 'Описан Тверски и Канеманом в 1974 году.' },
+      { q: 'С чем сравнивать цену покупки?', a: ['С «прежней ценой»', 'С бюджетом и целями', 'С ценой у друга'], ok: 1, why: 'Твой бюджет — единственный честный ориентир.' }
+    ] },
+    { id: 'w04d5', title: 'Автоматизация и сила умолчаний', min: 10, body: [
+      'Ричард Талер и Шломо Бенарци разработали программу «Save More Tomorrow» (опубликована в 2004 году): сотрудники заранее соглашались направлять часть будущих повышений зарплаты в сбережения. Норма сбережений участников выросла в несколько раз за несколько лет — без ежемесячных усилий.',
+      '## Почему работают умолчания',
+      'Большинство людей оставляет настройки «по умолчанию». Если умолчание — «откладывать», люди откладывают. Если «тратить» — тратят.',
+      '## Твои умолчания',
+      '- День зарплаты: автоматический перевод в резерв/накопления.',
+      '- Автоплатежи по кредитам за 2–3 дня до срока, чтобы не было просрочек.',
+      '- Будущие повышения: заранее реши, какая доля пойдёт на погашение и накопления.',
+      '- Остаток личного бюджета → накопления (в приложении — по подтверждению).',
+      '> Совет: настрой в банке хотя бы одно автоматическое правило на этой неделе. Приложение не управляет твоим банком — это делается в банковском приложении.'
+    ], quiz: [
+      { q: 'Суть Save More Tomorrow —', a: ['Откладывать часть будущих повышений автоматически', 'Брать кредит сегодня', 'Тратить бонусы'], ok: 0, why: 'Решение заранее о будущих деньгах.' },
+      { q: 'Почему умолчания так сильны?', a: ['Большинство не меняет настройки', 'Их требует закон', 'Они дают процент'], ok: 0, why: 'Инерция — мощная сила.' },
+      { q: 'Когда лучше ставить автоплатёж по кредиту?', a: ['В день срока', 'За 2–3 дня до срока', 'После срока'], ok: 1, why: 'Запас на задержки перевода.' }
+    ] },
+    { id: 'w04d6', title: 'Правило 24 часов', min: 10, body: [
+      'Импульсивная покупка — та, которую ты не планировал час назад. Самый простой фильтр: пауза.',
+      '## Правило',
+      'Любая незапланированная покупка дороже 200 AED ждёт 24 часа. Дороже 1 000 AED — неделю. Если через сутки желание осталось и покупка помещается в бюджет — покупай без чувства вины.',
+      '## Почему это работает',
+      'Эмоциональный пик проходит за часы. Пауза превращает решение «горячей» системы мышления в решение «холодной» (Канеман называет их Системой 1 и Системой 2).',
+      '## Проверка покупки в приложении',
+      'В разделе «Ещё → Проверка покупки» приложение показывает, как покупка повлияет на обязательные платежи, и помечает несущественные покупки дороже 200 AED. Кредитный лимит не считается деньгами на покупку.',
+      '## Список желаний',
+      'Записывай всё, что хочется, в список. Через месяц половина пунктов покажется ненужной — и это деньги, которые ты сохранил.',
+      '> Подумай: какая покупка за последний месяц не прошла бы правило 24 часов?'
+    ], quiz: [
+      { q: 'Незапланированная покупка за 350 AED. По правилу —', a: ['Купить сразу', 'Подождать 24 часа', 'Подождать год'], ok: 1, why: 'Порог 200 AED.' },
+      { q: 'Кредитный лимит — это деньги на покупку?', a: ['Да', 'Нет, это долг', 'Только по выходным'], ok: 1, why: 'Покупка с лимита — это новый долг.' },
+      { q: 'Список желаний помогает, потому что…', a: ['Со временем многие желания проходят', 'Магазины дают скидку', 'Так требует банк'], ok: 0, why: 'Время отделяет желания от потребностей.' }
+    ] },
+    { id: 'w04d7', title: 'Обзор месяца: твой ритуал', min: 10, body: [
+      'Первый месяц Академии позади. Ты прошёл уровень основ учёта, бюджета, отчёта и поведения. Теперь — ритуал, который превратит знания в систему.',
+      '## Ежемесячный ритуал (30 минут, последний день месяца)',
+      '- Сверка всех счетов с банком.',
+      '- Остаток личного бюджета → накопления.',
+      '- Факт дохода в плане доходов: сколько пришло по каждой строке.',
+      '- Чистый капитал и три коэффициента.',
+      '- Одно решение на следующий месяц.',
+      '## Итоги месяца',
+      '- Учёт: 4 типа операций, категории, сверка.',
+      '- Бюджет: обязательства → будущее → жизнь; на пессимистичный доход.',
+      '- Отчёт: капитал, ликвидность, коэффициенты.',
+      '- Поведение: ментальный учёт, неприятие потерь, предпочтение «сейчас», якоря, автоматизация, пауза.',
+      '> Сравни: стартовый капитал при начале Академии и сегодня {netWorth}. Даже небольшое движение вверх — результат.',
+      'Следующий месяц — доходы, календарь платежей, семья и итог уровня 1. Новые уроки будут добавляться по неделям.'
+    ], quiz: [
+      { q: 'Что входит в ежемесячный ритуал?', a: ['Сверка, остаток бюджета, факт дохода, капитал, решение', 'Только покупка подарков', 'Смена банка'], ok: 0, why: 'Пять шагов за 30 минут.' },
+      { q: 'Какое из этого — поведенческая ловушка?', a: ['Автоматизация', 'Эффект якоря', 'Сверка'], ok: 1, why: 'Якорь искажает оценку цены.' },
+      { q: 'Главная цель первого месяца —', a: ['Стать инвестором', 'Построить систему учёта, бюджета и обзоров', 'Взять новый кредит'], ok: 1, why: 'Фундамент для всех следующих уровней.' }
+    ] }
+  ],
+  tasks: [
+    { id: 'w04t1', slot: 1, kind: 'case', title: 'Кейс: распродажа 11.11 и три рассрочки', min: 60, body: [
+      'Дина (вымышленная) за неделю распродаж купила: наушники за 899 (было 1 499), кроссовки за 450 (было 750) и кофемашину за 1 200 в рассрочку на 4 платежа. Её личный бюджет — 800 AED в месяц, резерва нет, по карте долг 3 000 под 3% в месяц.',
+      '## Задание',
+      '- Найди в её решениях не менее трёх поведенческих ловушек из этой недели и объясни каждую.',
+      '- Посчитай «экономию», которую видела Дина, и реальный расход. Сколько месяцев личного бюджета ушло?',
+      '- Карта под 3% в месяц: сколько это примерно годовых без капитализации? Во что обойдутся покупки, если гасить их минимальным платежом полгода?',
+      '- Предложи Дине 3 правила (умолчания), которые защитили бы её на следующей распродаже.',
+      '## Результат',
+      'Разбор ловушек, расчёты, 3 правила.'
+    ], hint: '3% в месяц × 12 = 36% годовых без капитализации (с капитализацией ≈ 42,6%).' },
+    { id: 'w04t2', slot: 2, kind: 'plan', title: 'Месячный обзор и план привычек', min: 60, body: [
+      'Проводим твой первый полный ежемесячный ритуал на реальных данных.',
+      '## Шаги',
+      '- Сверь все счета и карты с банком.',
+      '- Посмотри остаток личного бюджета: потрачено {budgetSpent} из {budget}. Реши, переводить ли остаток в накопления (в приложении: «Главная → Личный бюджет»).',
+      '- Внеси фактический доход месяца по строкам в «План доходов».',
+      '- Запиши капитал {netWorth}, долг {debt} и три коэффициента.',
+      '- Выбери 3 привычки на следующий месяц: одно автоматическое правило в банке, одно правило покупок, одно правило обзора.',
+      '## Результат',
+      'Заметка: цифры месяца, 3 привычки, дата следующего обзора.'
+    ] }
+  ]
+});
+
+</script>
+<script>
+/* Akbar Finance — Академия: урок дня (10 минут + тест), задания по понедельникам и вторникам (~1 час),
+   XP, уровни, серия дней, карта года, «Для свободного времени». Прогресс хранится в книге (IndexedDB) и попадает в резервную копию JSON. */
+(function () {
+  'use strict';
+  var App = window.App, C = App.C, I = App.I, S = App.S, T = App.T, esc = App.esc, A = window.AFAcademy;
+  var TASK_XP = 50;
+
+  function st() { var a = S.L.academy || {}; return { start: a.start || null, lessons: a.lessons || {}, tasks: a.tasks || {}, reached: a.reached || {} }; }
+  function mutate(label, fn) { return App.commit(label, function (L) { L.academy = L.academy || {}; ['lessons', 'tasks', 'reached'].forEach(function (k) { L.academy[k] = L.academy[k] || {}; }); if (!L.academy.start) L.academy.start = S.today; fn(L.academy); }, { nolog: true }); }
+  function xp(s) { var x = 0; Object.keys(s.lessons).forEach(function (k) { x += s.lessons[k].xp || 0; }); Object.keys(s.tasks).forEach(function (k) { x += s.tasks[k].xp || 0; }); return x; }
+  function activityDates(s) { var d = []; Object.keys(s.lessons).forEach(function (k) { d.push(s.lessons[k].date); }); Object.keys(s.tasks).forEach(function (k) { d.push(s.tasks[k].date); }); return d; }
+  function weekDone(s, n) { var w = A.content[n]; return !!w && w.lessons.every(function (l) { return s.lessons[l.id]; }); }
+  function levelOf(n) { return A.LEVELS.filter(function (l) { return n >= l.weeks[0] && n <= l.weeks[1]; })[0]; }
+  /* the next lesson (sequential). One new lesson per day; finished lessons can be reviewed any time. */
+  function nextLesson(s) {
+    var all = A.lessons(), i = 0; while (i < all.length && s.lessons[all[i].id]) i++;
+    var nxt = all[i] || null, doneToday = Object.keys(s.lessons).some(function (k) { return s.lessons[k].date === S.today && !s.lessons[k].review; });
+    return { lesson: nxt, index: i, total: all.length, doneToday: doneToday, available: !!nxt && !doneToday };
+  }
+  function lessonState(s, id) {
+    var all = A.lessons(), i = all.map(function (l) { return l.id; }).indexOf(id), n = nextLesson(s);
+    if (s.lessons[id]) return 'done'; if (i === n.index && n.available) return 'open'; return 'locked';
+  }
+  function openTasks(s) {
+    var out = [];
+    Object.keys(A.content).map(Number).sort(function (a, b) { return a - b; }).forEach(function (n) {
+      (A.content[n].tasks || []).forEach(function (t) { var open = C.academyTaskOpen(s.reached[n], S.today, t.slot); out.push({ week: n, task: t, open: open, done: !!s.tasks[t.id] }); });
+    });
+    return out;
+  }
+  function curWeek(s) { var n = nextLesson(s); return n.lesson ? n.lesson.week : (Object.keys(A.content).map(Number).sort(function (a, b) { return b - a; })[0] || 1); }
+
+  /* ---------- hub ---------- */
+  App.screens.academy = function () {
+    var s = st(), x = xp(s), rk = C.academyRank(x), streak = C.academyStreak(activityDates(s), S.today), n = nextLesson(s), day = C.academyDay(s.start || S.today, S.today), cw = curWeek(s), wk = A.WEEKS[cw - 1], lv = levelOf(cw);
+    var h = '<div class="card acad-hero"><div class="split"><div><div class="tiny muted">' + T('Уровень ', 'Level ') + lv.n + ' · ' + esc(lv.title) + '</div><div class="b" style="font-size:20px">' + T('Неделя ', 'Week ') + cw + '. ' + esc(wk.title) + '</div></div><div class="acad-streak" title="streak">' + I('flame') + '<b class="num">' + streak + '</b></div></div>' +
+      '<div class="small muted mt8">' + esc(wk.goal) + '</div><div class="split mt12 small"><span>' + T('Ранг ', 'Rank ') + rk.rank + ' · <b class="num">' + x + ' XP</b></span><span class="muted num">' + (rk.next ? rk.next - x + T(' XP до ранга ', ' XP to rank ') + (rk.rank + 1) : T('максимум', 'max')) + '</span></div><div class="bar mt8"><i style="width:' + rk.pct * 100 + '%;background:' + lv.color + '"></i></div></div>';
+    // today's lesson
+    h += '<div class="sec-h"><span class="t">' + T('Урок дня · 10 минут', 'Lesson of the day · 10 min') + '</span><span class="tiny muted">' + Math.min(n.index, n.total) + ' / ' + n.total + '</span></div>';
+    if (n.lesson && n.available) h += '<button class="card tap acad-lesson" data-a="go" data-s="academyLesson" data-id="' + n.lesson.id + '"><span class="cat-ic" style="background:' + lv.color + '">' + I('book') + '</span><div class="grow"><div class="tiny muted">' + T('Неделя ', 'Week ') + n.lesson.week + T(' · день ', ' · day ') + n.lesson.day + '</div><div class="b">' + esc(n.lesson.title) + '</div><div class="tiny muted">' + T('чтение + тест из ', 'reading + quiz of ') + n.lesson.quiz.length + T(' вопросов', ' questions') + '</div></div>' + I('chev', 'sm') + '</button>';
+    else if (n.lesson) h += '<div class="card"><div class="alert ok">' + I('check') + '<div class="grow">' + T('Урок дня пройден. Следующий — «', 'Today\'s lesson is done. Next — “') + esc(n.lesson.title) + T('» — откроется завтра. Пройденные уроки можно повторять.', '” — opens tomorrow. You can review finished lessons.') + '</div></div></div>';
+    else h += '<div class="card"><div class="alert info">' + I('info') + '<div class="grow">' + T('Ты прошёл все опубликованные уроки. Новые недели добавляются по одной — следи за картой года.', 'You finished all published lessons. New weeks are added one at a time — see the roadmap.') + '</div></div></div>';
+    // assignments
+    var ts = openTasks(s), pend = ts.filter(function (t) { return t.open && !t.done; }), wd = day.weekday;
+    h += '<div class="sec-h"><span class="t">' + T('Задания · пн и вт · ~1 час', 'Assignments · Mon & Tue · ~1 h') + '</span></div>';
+    if (pend.length) h += pend.map(function (t) { return taskRow(t); }).join('');
+    else h += '<div class="card small muted">' + (wd === 0 || wd === 1 ? T('Задание этой недели откроется, когда ты начнёшь неделю (первый урок недели).', 'This week\'s assignment opens once you start the week (its first lesson).') : T('Следующее задание — в понедельник. По понедельникам кейс или расчёт, по вторникам — расчёт на твоих данных или план.', 'Next assignment on Monday. Mondays: case or calculation; Tuesdays: work on your own data or a plan.')) + '</div>';
+    h += '<div class="list mt12">' +
+      '<button class="row tap" data-a="go" data-s="academyRoadmap"><span class="cat-ic" style="background:#5E5CE6">' + I('flag') + '</span><div class="main-t"><div class="t1">' + T('Карта года · 52 недели', 'Year roadmap · 52 weeks') + '</div><div class="t2">' + T('5 уровней, темы каждой недели', '5 levels, topics per week') + '</div></div>' + I('chev', 'sm') + '</button>' +
+      '<button class="row tap" data-a="go" data-s="academyDone"><span class="cat-ic" style="background:#30D158">' + I('check') + '</span><div class="main-t"><div class="t1">' + T('Пройденное и задания', 'Completed & assignments') + '</div><div class="t2">' + Object.keys(s.lessons).length + T(' уроков · ', ' lessons · ') + Object.keys(s.tasks).length + T(' заданий', ' assignments') + '</div></div>' + I('chev', 'sm') + '</button>' +
+      '<button class="row tap" data-a="go" data-s="academyLibrary"><span class="cat-ic" style="background:#FF9F0A">' + I('heart') + '</span><div class="main-t"><div class="t1">' + T('Для свободного времени', 'For your free time') + '</div><div class="t2">' + T('Курсы MIT и Yale, книги, аудиокниги, подкасты', 'MIT & Yale courses, books, audiobooks, podcasts') + '</div></div>' + I('chev', 'sm') + '</button></div>';
+    h += '<div class="dashed-note">' + T('Академия — авторская программа приложения в формате кейс-метода. Это не официальный курс какого-либо университета. Примеры в уроках подставляются из твоей книги прямо на устройстве.', 'The Academy is the app\'s own case-method programme, not an official course of any university. Examples use numbers from your ledger, computed on this device.') + '</div>';
+    return { title: T('Академия', 'Academy'), html: h };
+  };
+  function taskRow(t) {
+    return '<button class="card tap acad-lesson" data-a="go" data-s="academyTask" data-id="' + t.task.id + '"><span class="cat-ic" style="background:' + (t.task.slot === 1 ? '#0A84FF' : '#BF5AF2') + '">' + I(t.task.kind === 'case' ? 'briefcase' : t.task.kind === 'calc' ? 'percent' : 'target') + '</span><div class="grow"><div class="tiny muted">' + (t.task.slot === 1 ? T('Понедельник', 'Monday') : T('Вторник', 'Tuesday')) + ' · ' + T('неделя ', 'week ') + t.week + ' · ' + ({ case: T('кейс', 'case'), calc: T('расчёт на твоих данных', 'your numbers'), plan: T('план', 'plan') }[t.task.kind]) + '</div><div class="b">' + esc(t.task.title) + '</div><div class="tiny muted">~' + t.task.min + T(' мин · +', ' min · +') + TASK_XP + ' XP' + (t.done ? ' · ' + T('выполнено', 'done') : '') + '</div></div>' + I('chev', 'sm') + '</button>';
+  }
+  function renderBody(lines, ctx) {
+    var h = '', inList = false;
+    lines.forEach(function (raw) {
+      var s0 = App.fillCtx(raw, ctx);
+      if (s0.indexOf('- ') === 0) { if (!inList) { h += '<ul>'; inList = true; } h += '<li>' + esc(s0.slice(2)) + '</li>'; return; }
+      if (inList) { h += '</ul>'; inList = false; }
+      if (s0.indexOf('## ') === 0) h += '<h3>' + esc(s0.slice(3)) + '</h3>';
+      else if (s0.indexOf('> ') === 0) h += '<div class="acad-callout">' + I('info', 'sm') + '<span>' + esc(s0.slice(2)) + '</span></div>';
+      else h += '<p>' + esc(s0) + '</p>';
+    });
+    if (inList) h += '</ul>';
+    return h;
+  }
+  function findLesson(id) { return A.lessons().filter(function (l) { return l.id === id; })[0]; }
+  function findTask(id) { var r = null; Object.keys(A.content).forEach(function (n) { (A.content[n].tasks || []).forEach(function (t) { if (t.id === id) r = Object.assign({ week: +n }, t); }); }); return r; }
+
+  /* ---------- lesson + quiz ---------- */
+  App.screens.academyLesson = function (p) {
+    var s = st(), l = findLesson(p.id); if (!l) return { title: T('Урок', 'Lesson'), html: '<div class="empty">—</div>' };
+    var state = lessonState(s, l.id);
+    if (state === 'locked') return { title: l.title, html: '<div class="card"><div class="alert info">' + I('info') + '<div class="grow">' + T('Этот урок откроется по порядку: один новый урок в день.', 'This lesson unlocks in order: one new lesson per day.') + '</div></div></div>' };
+    var q = S.ui.quiz && S.ui.quiz.id === l.id ? S.ui.quiz : (S.ui.quiz = { id: l.id, ans: {}, checked: false });
+    var h = '<div class="tiny muted">' + T('Неделя ', 'Week ') + l.week + T(' · день ', ' · day ') + l.day + ' · ~' + l.min + T(' мин', ' min') + (state === 'done' ? ' · ' + T('пройден', 'done') : '') + '</div><article class="acad-body card mt8">' + renderBody(l.body, App.finCtx()) + '</article>';
+    h += '<div class="sec-h"><span class="t">' + T('Тест', 'Quiz') + '</span></div>';
+    h += l.quiz.map(function (qq, qi) {
+      return '<div class="card acad-q"><div class="b">' + (qi + 1) + '. ' + esc(qq.q) + '</div>' + qq.a.map(function (a, ai) {
+        var sel = q.ans[qi] === ai, cls = q.checked ? (ai === qq.ok ? ' ok' : sel ? ' bad' : '') : sel ? ' sel' : '';
+        return '<button class="acad-opt' + cls + '" data-a="acadAns" data-q="' + qi + '" data-v="' + ai + '"' + (q.checked ? ' disabled' : '') + '>' + esc(a) + '</button>';
+      }).join('') + (q.checked ? '<div class="tiny muted mt8">' + esc(qq.why) + '</div>' : '') + '</div>';
+    }).join('');
+    var all = l.quiz.every(function (qq, qi) { return q.ans[qi] != null; });
+    if (!q.checked) h += '<div class="btns"><button class="btn block" data-a="acadCheck" data-id="' + l.id + '"' + (all ? '' : ' disabled style="opacity:.45"') + '>' + T('Проверить ответы', 'Check answers') + '</button></div>';
+    else {
+      var correct = l.quiz.filter(function (qq, qi) { return q.ans[qi] === qq.ok; }).length;
+      h += '<div class="card center"><div class="b" style="font-size:20px">' + correct + ' / ' + l.quiz.length + '</div><div class="small muted">' + (state === 'done' ? T('Повторение — XP не начисляется повторно.', 'Review — XP is not awarded again.') : '+' + C.lessonXP(correct, l.quiz.length) + ' XP') + '</div></div>';
+      h += '<div class="btns"><button class="btn sec" data-a="acadRetry">' + T('Ещё раз', 'Retry') + '</button><button class="btn" data-a="go" data-s="academy">' + T('К Академии', 'To Academy') + '</button></div>';
+    }
+    return { title: l.title, html: h };
+  };
+  App.actions.acadAns = function (el) { S.ui.quiz.ans[+el.dataset.q] = +el.dataset.v; App.render(); };
+  App.actions.acadRetry = function () { S.ui.quiz = { id: S.ui.quiz.id, ans: {}, checked: false }; App.render(); };
+  App.actions.acadCheck = function (el) {
+    var l = findLesson(el.dataset.id), q = S.ui.quiz, s = st();
+    if (!l.quiz.every(function (qq, qi) { return q.ans[qi] != null; })) return;
+    q.checked = true;
+    var correct = l.quiz.filter(function (qq, qi) { return q.ans[qi] === qq.ok; }).length;
+    if (s.lessons[l.id]) { App.render(); return; }
+    mutate(T('Урок пройден: +', 'Lesson done: +') + C.lessonXP(correct, l.quiz.length) + ' XP', function (a) {
+      a.lessons[l.id] = { date: S.today, correct: correct, total: l.quiz.length, xp: C.lessonXP(correct, l.quiz.length) };
+      if (!a.reached[l.week]) a.reached[l.week] = S.today;
+    });
+  };
+
+  /* ---------- assignment ---------- */
+  App.screens.academyTask = function (p) {
+    var s = st(), t = findTask(p.id); if (!t) return { title: '—', html: '' };
+    var open = C.academyTaskOpen(s.reached[t.week], S.today, t.slot), done = s.tasks[t.id];
+    var h = '<div class="tiny muted">' + (t.slot === 1 ? T('Понедельник', 'Monday') : T('Вторник', 'Tuesday')) + ' · ' + T('неделя ', 'week ') + t.week + ' · ~' + t.min + T(' мин', ' min') + '</div>';
+    if (!open && !done) return { title: t.title, html: h + '<div class="card mt8"><div class="alert info">' + I('calendar') + '<div class="grow">' + T('Задание откроется в ближайший ', 'Opens on the next ') + (t.slot === 1 ? T('понедельник', 'Monday') : T('вторник', 'Tuesday')) + T(' после начала недели ', ' after you start week ') + t.week + '.</div></div></div>' };
+    h += '<article class="acad-body card mt8">' + renderBody(t.body, App.finCtx()) + (t.hint ? '<details class="mt12"><summary class="small b">' + T('Подсказка', 'Hint') + '</summary><p class="small">' + esc(t.hint) + '</p></details>' : '') + '</article>';
+    var note = S.ui.taskNote && S.ui.taskNote.id === t.id ? S.ui.taskNote.v : (done && done.note) || '';
+    h += '<div class="form"><div class="group"><div class="fld col"><label>' + T('Твой результат (заметка, хранится только на устройстве)', 'Your result (note, stays on this device)') + '</label><textarea class="in" rows="8" data-live="acadNote" data-id="' + t.id + '">' + esc(note) + '</textarea></div></div></div>';
+    h += '<div class="btns"><button class="btn block" data-a="acadTaskDone" data-id="' + t.id + '">' + (done ? T('Сохранить заметку', 'Save note') : T('Отметить выполненным · +', 'Mark done · +') + TASK_XP + ' XP') + '</button></div>';
+    return { title: t.title, html: h };
+  };
+  App.live.acadNote = function (el) { S.ui.taskNote = { id: el.dataset.id, v: el.value }; };
+  App.actions.acadTaskDone = function (el) {
+    var id = el.dataset.id, s = st(), note = S.ui.taskNote && S.ui.taskNote.id === id ? S.ui.taskNote.v : (s.tasks[id] && s.tasks[id].note) || '';
+    mutate(s.tasks[id] ? T('Заметка сохранена', 'Note saved') : T('Задание выполнено: +', 'Assignment done: +') + TASK_XP + ' XP', function (a) { a.tasks[id] = Object.assign({ date: S.today, xp: TASK_XP }, a.tasks[id] || {}, { note: note }); });
+  };
+
+  /* ---------- roadmap ---------- */
+  App.screens.academyRoadmap = function () {
+    var s = st(), cw = curWeek(s), h = '<div class="dashed-note">' + T('Годовая программа из 52 недель. Уроки публикуются по одной неделе; недели без материалов отмечены «скоро».', '52-week programme. Lessons are published one week at a time; weeks without material are marked “soon”.') + '</div>';
+    A.LEVELS.forEach(function (lv) {
+      var weeks = A.WEEKS.filter(function (w) { return w.level === lv.n; });
+      var prevDone = lv.n === 1 || A.WEEKS.filter(function (w) { return w.level === lv.n - 1; }).every(function (w) { return weekDone(s, w.n); });
+      h += '<div class="sec-h"><span class="t"><span class="lvl-dot" style="background:' + lv.color + '"></span>' + T('Уровень ', 'Level ') + lv.n + ' · ' + esc(lv.title) + '</span><span class="tiny muted">' + T('нед. ', 'wk ') + lv.weeks[0] + '–' + lv.weeks[1] + (prevDone ? '' : ' · ' + I('shield', 'sm') + T(' закрыт', ' locked')) + '</span></div>';
+      h += '<div class="tiny muted" style="margin:-4px 4px 8px">' + esc(lv.about) + '</div><div class="list">' + weeks.map(function (w) {
+        var has = A.hasWeek(w.n), done = has && weekDone(s, w.n), tag = done ? '<span class="tag ok">' + T('пройдено', 'done') + '</span>' : w.n === cw && has ? '<span class="tag info">' + T('сейчас', 'now') + '</span>' : has ? '<span class="tag">' + T('доступно', 'available') + '</span>' : '<span class="tag">' + T('скоро', 'soon') + '</span>';
+        return '<div class="row' + (has ? '' : ' dim') + '"><span class="wk-n num">' + w.n + '</span><div class="main-t"><div class="t1">' + esc(w.title) + ' ' + tag + '</div><div class="t2">' + esc(w.goal) + '</div><div class="t2">' + esc(w.topics.join(' · ')) + '</div></div></div>';
+      }).join('') + '</div>';
+    });
+    h += '<div class="tiny muted mt8">' + T('Кварталы: Q1 — недели 1–13, Q2 — 14–26, Q3 — 27–39, Q4 — 40–52.', 'Quarters: Q1 weeks 1–13, Q2 14–26, Q3 27–39, Q4 40–52.') + '</div>';
+    return { title: T('Карта года', 'Year roadmap'), html: h };
+  };
+
+  /* ---------- completed ---------- */
+  App.screens.academyDone = function () {
+    var s = st(), h = '';
+    Object.keys(A.content).map(Number).sort(function (a, b) { return a - b; }).forEach(function (n) {
+      var w = A.content[n];
+      h += '<div class="sec-h"><span class="t">' + T('Неделя ', 'Week ') + n + ' · ' + esc(A.WEEKS[n - 1].title) + '</span></div><div class="list">' + w.lessons.map(function (l, i) {
+        var d = s.lessons[l.id], ls = lessonState(s, l.id);
+        return '<button class="row tap" data-a="go" data-s="academyLesson" data-id="' + l.id + '"' + (ls === 'locked' ? ' disabled style="opacity:.5"' : '') + '><span class="wk-n num">' + (i + 1) + '</span><div class="main-t"><div class="t1">' + esc(l.title) + '</div><div class="t2">' + (d ? d.correct + '/' + d.total + ' · +' + d.xp + ' XP · ' + App.fd(d.date) : ls === 'open' ? T('урок дня', 'lesson of the day') : T('закрыт', 'locked')) + '</div></div>' + (d ? I('check', 'sm') : '') + '</button>';
+      }).join('') + (w.tasks || []).map(function (t) { var d = s.tasks[t.id], open = C.academyTaskOpen(s.reached[n], S.today, t.slot); return '<button class="row tap" data-a="go" data-s="academyTask" data-id="' + t.id + '"><span class="cat-ic" style="background:' + (t.slot === 1 ? '#0A84FF' : '#BF5AF2') + '">' + I('briefcase') + '</span><div class="main-t"><div class="t1">' + esc(t.title) + '</div><div class="t2">' + (d ? T('выполнено ', 'done ') + App.fd(d.date) : open ? T('открыто', 'open') : (t.slot === 1 ? T('откроется в понедельник', 'opens Monday') : T('откроется во вторник', 'opens Tuesday'))) + '</div></div></button>'; }).join('') + '</div>';
+    });
+    return { title: T('Пройденное', 'Completed'), html: h };
+  };
+
+  /* ---------- library ---------- */
+  App.screens.academyLibrary = function () {
+    var h = '<div class="dashed-note">' + T('Необязательные материалы. Бесплатные, если не указано иное. Ссылки открываются на внешних сайтах; ссылки проверены 25.11.2026.', 'Optional. Free unless noted. Links open external sites; checked on 25.11.2026.') + '</div>';
+    (A.LIBRARY || []).forEach(function (g) {
+      h += '<div class="sec-h"><span class="t">' + esc(g.group) + '</span></div><div class="list">' + g.items.map(function (it) {
+        var inner = '<div class="main-t"><div class="t1">' + esc(it.t) + ' <span class="tag">' + esc(it.lang) + '</span></div><div class="t2">' + esc(it.d) + '</div></div>';
+        return it.url ? '<a class="row tap" href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer">' + inner + I('chev', 'sm') + '</a>' : '<div class="row">' + inner + '</div>';
+      }).join('') + '</div>';
+    });
+    h += '<div class="sec-h"><span class="t">' + T('Цитаты', 'Quotes') + '</span></div><div class="list">' + C.QUOTES.filter(function (q) { return q.a !== 'Совет дня'; }).map(function (q) { return '<div class="row"><div class="main-t"><div class="t1" style="white-space:normal">«' + esc(q.ru) + '»</div><div class="t2">' + esc(q.a) + '</div></div></div>'; }).join('') + '</div>';
+    return { title: T('Для свободного времени', 'For your free time'), html: h };
+  };
+
+  /* ---------- entry points ---------- */
+  App.academyTeaser = function () {
+    var s = st(), n = nextLesson(s), streak = C.academyStreak(activityDates(s), S.today), pend = openTasks(s).filter(function (t) { return t.open && !t.done; }).length;
+    var sub = n.lesson ? (n.available ? T('Урок дня: ', 'Today: ') + n.lesson.title : T('Урок дня пройден ✓', 'Today\'s lesson done ✓')) : T('Все опубликованные уроки пройдены', 'All published lessons done');
+    return '<button class="card tap acad-teaser" data-a="go" data-s="academy"><span class="cat-ic" style="background:#5E5CE6">' + I('book') + '</span><div class="grow"><div class="b">' + T('Академия', 'Academy') + '</div><div class="small muted ellipsis">' + esc(sub) + (pend ? ' · ' + T('задание ждёт', 'assignment waiting') : '') + '</div></div><span class="acad-streak">' + I('flame') + '<b class="num">' + streak + '</b></span></button>';
+  };
+  var moreHub = App.screens.more;
+  App.screens.more = function () {
+    var out = moreHub(), s = st(), x = xp(s);
+    var row = '<div class="list"><button class="row tap" data-a="go" data-s="academy"><span class="cat-ic" style="background:#5E5CE6">' + I('book') + '</span><div class="main-t"><div class="t1">' + T('Академия', 'Academy') + '</div><div class="t2">' + T('Урок дня 10 мин · задания пн/вт · ', 'Daily 10-min lesson · Mon/Tue tasks · ') + x + ' XP</div></div>' + I('chev', 'sm') + '</button>' +
+      '<button class="row tap" data-a="go" data-s="incomeYear"><span class="cat-ic" style="background:#30D158">' + I('arrowIn') + '</span><div class="main-t"><div class="t1">' + T('План доходов на год', 'Yearly income plan') + '</div><div class="t2">' + T('месяц · квартал · год, факт и отклонение', 'month · quarter · year, actual & variance') + '</div></div>' + I('chev', 'sm') + '</button></div>';
+    var i = out.html.indexOf('<div class="list">');
+    out.html = i >= 0 ? out.html.slice(0, i) + row + out.html.slice(i) : row + out.html;
+    return out;
+  };
+  App.academyInternals = { nextLesson: nextLesson, openTasks: openTasks, xp: xp };
 })();
 
 </script>

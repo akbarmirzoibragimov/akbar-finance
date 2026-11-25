@@ -104,8 +104,10 @@
       schema: SCHEMA, version: VERSION,
       meta: { id: uid('ledger'), name: opts.name || 'Akbar Finance', createdAt: new Date().toISOString(), asOf: t, baseCurrency: 'AED' },
       settings: { lang: opts.lang || 'ru', theme: 'dark', obligationsHorizonDays: 30, upcomingDays: 7 },
-      rates: { AED: 1, USD: 3.6725 },
-      rateMeta: { USD: { source: 'AED/USD peg 3.6725', confirmed: true } },
+      rates: { AED: 1, USD: 3.6725, UZS: 1 / 3264.51 },
+      rateMeta: { USD: { source: 'AED/USD peg 3.6725', confirmed: true }, UZS: { source: 'manual', confirmed: false } },
+      rateDates: { USD: '2026-11-25', UZS: '2026-11-25' },
+      incomePlan: { lines: [], months: {}, actuals: {} }, budgetSweeps: {},
       accounts: [], transactions: [], planned: [], categories: defaultCategories(),
       budgetPlan: { total: 50000 },
       goals: [], projects: [], assets: [],
@@ -1102,6 +1104,10 @@
     if (!Array.isArray(L.scenarios) || !L.scenarios.length) L.scenarios = defaultScenarios();
     L.settings = Object.assign(newLedger({}).settings, obj.settings || {});
     L.rates = Object.assign({ AED: 1 }, obj.rates || {});
+    if (L.rates.UZS == null) { L.rates.UZS = 1 / 3264.51; L.rateDates = Object.assign({}, L.rateDates, { UZS: '2026-11-25' }); }
+    if (!L.rateDates || typeof L.rateDates !== 'object') L.rateDates = { USD: '2026-11-25', UZS: '2026-11-25' };
+    if (!L.incomePlan || typeof L.incomePlan !== 'object') L.incomePlan = { lines: [], months: {}, actuals: {} };
+    if (!L.budgetSweeps || typeof L.budgetSweeps !== 'object') L.budgetSweeps = {};
     L.dismissed = obj.dismissed || {};
     L.budgetPlan = obj.budgetPlan || { total: 50000 };
     L.family = obj.family || { apartmentGoalId: null };
