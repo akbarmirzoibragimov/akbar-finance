@@ -24,7 +24,7 @@
     h += card('Debt Repayment · ' + T('Долги', 'Debts'), '<div class="kpis">' + kpi(T('Общий долг', 'Total debt'), F(ds.total), 'neg') + kpi(T('Краткосрочный', 'Short-term'), F(ds.short), 'neg') + '</div><div class="bar mt12"><i style="width:' + (ds.initialTotal ? (1 - ds.total / ds.initialTotal) * 100 : 0) + '%;background:var(--income)"></i></div><div class="tiny muted mt8">' + T('Погашено основного долга: ', 'Principal repaid: ') + esc(F(ds.repaidTotal)) + '</div>', 'debts');
     var fs = C.familyStatus(L, S.today);
     h += card('Family Support · ' + T('Родителям', 'Parents'), '<div class="kpis">' + kpi(T('План', 'Plan'), F(fs.planTotal), 'sav') + kpi(T('Отправлено', 'Sent'), F(fs.sentTotal), 'sav') + '</div>', 'family');
-    var first = C.firstPlanMonth(L), mp1 = C.monthPlan(L, first, { today: S.today, scenarios: scen() }), mp2 = C.monthPlan(L, C.addMonths(first, 1), { today: S.today, scenarios: scen() });
+    var first = C.simStartYm(L, S.today), mp1 = C.monthPlan(L, first, { today: S.today, scenarios: scen() }), mp2 = C.monthPlan(L, C.addMonths(first, 1), { today: S.today, scenarios: scen() });
     h += card(T('Бюджетные периоды', 'Budget periods'), '<div class="kpis">' + kpi(App.fym(first), F(mp1.result), mp1.result < 0 ? 'neg' : 'pos') + kpi(App.fym(C.addMonths(first, 1)), F(mp2.result), mp2.result < 0 ? 'neg' : 'pos') + '</div><div class="tiny muted mt8">' + T('Доход конца месяца финансирует следующий месяц', 'End-of-month income funds the next month') + (S.ui.scen.reborrow ? ' · ' + T('со сценарием займа', 'with loan scenario') : '') + '</div>', 'monthplan');
     h += card(T('Сценарный симулятор', 'Scenario simulator'), '<div class="small muted">' + T('Негативный / базовый / оптимистичный — без изменения реальных данных', 'Negative / base / optimistic — without touching real data') + '</div>', 'simulator');
     h += card(T('Могу ли я позволить себе покупку?', 'Can I afford it?'), '<div class="small muted">' + T('Проверка влияния покупки на план', 'Check a purchase against the plan') + '</div>', 'purchase');
@@ -79,7 +79,7 @@
   };
   function monthNav(key, ym) { return '<div class="seg" style="margin-bottom:6px"><button data-a="monthNav" data-k="' + key + '" data-d="-1">‹</button><button class="on" style="flex:4">' + esc(App.fym(ym)) + '</button><button data-a="monthNav" data-k="' + key + '" data-d="1">›</button></div>'; }
   App.monthNav = monthNav;
-  App.actions.monthNav = function (el) { var k = el.dataset.k; S.ui[k] = C.addMonths(S.ui[k] || (k === 'planYm' ? C.firstPlanMonth(S.L) : C.ymOf(S.today)), +el.dataset.d); App.render(); };
+  App.actions.monthNav = function (el) { var k = el.dataset.k; S.ui[k] = C.addMonths(S.ui[k] || (k === 'planYm' ? C.simStartYm(S.L, S.today) : C.ymOf(S.today)), +el.dataset.d); App.render(); };
   App.modals.budgetTotal = function (m) { if (!m.inited) { m.inited = true; m.f.total = App.amtStr(S.L.budgetPlan.total); } return { title: T('Личный бюджет в месяц', 'Monthly personal budget'), html: '<div class="form">' + App.group('', App.fld(T('Сумма', 'Amount') + ' (AED)', App.inp('total', m.f.total, { num: true }))) + '</div>', done: 'saveBudgetTotal', doneLabel: T('Сохранить', 'Save') }; };
   App.actions.saveBudgetTotal = function () { var v = App.toMinor(S.modal.f.total); if (v == null) return; App.commit(T('Бюджет изменён', 'Budget updated'), function (L) { L.budgetPlan.total = v; }); App.closeModal(); };
 
@@ -168,7 +168,7 @@
   App.screens.debts = function () {
     var L = S.L, ds = C.debtSummary(L, S.today), h = '';
     h += '<div class="card hero"><div class="lbl">' + T('Общая задолженность', 'Total debt') + '</div><div class="big num neg">' + esc(F(ds.total)) + '</div><div class="kpis">' + kpi(T('Краткосрочная', 'Short-term'), F(ds.short), 'neg') + kpi(T('Долгосрочная', 'Long-term'), F(ds.long), 'neg') + kpi(T('Уже погашено (осн. долг)', 'Repaid (principal)'), F(ds.repaidTotal), 'pos') + kpi(T('Свобода от долгов', 'Debt-free'), ds.debtFreeDate ? App.fym(ds.debtFreeDate.slice(0, 7)) : '—', 'acc', ds.debtFreeDate ? T('по плановым платежам', 'per planned payments') : T('не все долги имеют план', 'not all debts have a plan')) + '</div></div>';
-    var proj = C.debtProjection(L, S.today, 22);
+    var proj = C.debtProjection(L, S.today, 36);
     h += '<div class="card"><div class="card-h"><span class="t">' + T('График погашения (план)', 'Repayment schedule (plan)') + '</span></div>' + CH.line({ id: 'debtProj', series: [{ name: T('Прогноз общего долга по плану', 'Projected total debt per plan'), color: 'var(--expense)', dashed: true, fill: true, points: proj.map(function (p) { return { x: p.ym + '-01', y: p.debt }; }) }], fmtTip: function (v) { return F(v); }, fmtX: function (d) { return App.fymShort(d.slice(0, 7)); } }) + '<div class="tiny muted mt8">' + T('Уменьшение только на основной долг; процентная часть долгосрочного кредита — расчётная. Сценарий повторного займа не включён.', 'Only principal reduces the debt; long-term loan interest split is estimated. Re-borrow scenario excluded.') + '</div></div>';
     h += '<div class="sec-h"><span class="t">' + T('Прогресс по кредитам', 'Progress by debt') + '</span></div>';
     h += ds.rows.map(function (r) {
@@ -225,7 +225,7 @@
 
   /* ---------- budget periods (December / January plans etc.) ---------- */
   App.screens.monthplan = function () {
-    var L = S.L, ym = S.ui.planYm || C.firstPlanMonth(L), opts = { today: S.today, scenarios: scen() };
+    var L = S.L, ym = S.ui.planYm || C.simStartYm(L, S.today), opts = { today: S.today, scenarios: scen() };
     var mp = C.monthPlan(L, ym, opts), h = monthNav('planYm', ym);
     h += '<div class="form"><div class="group">' + App.fld(App.scenLabel(), '<input type="checkbox" class="sw" data-ch="toggleScen"' + (S.ui.scen.reborrow ? ' checked' : '') + '>') + '</div><div class="note">' + T('Сценарий не создаёт фактических операций. Повторное финансирование не гарантировано.', 'The scenario never creates actual records. Refinancing is not guaranteed.') + '</div></div>';
     var rows = mp.items.map(function (i) {
@@ -244,7 +244,10 @@
       }).join('') + '</ul></div></div>';
     }
     // multi-period table
-    var first = C.firstPlanMonth(L), last = C.lastPlanMonth(L), n = Math.max(1, (+last.slice(0, 4) - +first.slice(0, 4)) * 12 + (+last.slice(5, 7) - +first.slice(5, 7)) + 1);
+    var first = C.simStartYm(L, S.today), last = C.lastPlanMonth(L);
+    L.planned.forEach(function (p) { if (p.budgetMonth && p.budgetMonth > last) last = p.budgetMonth; });
+    var n = Math.max(1, Math.min(36, (+last.slice(0, 4) - +first.slice(0, 4)) * 12 + (+last.slice(5, 7) - +first.slice(5, 7)) + 1));
+    if (n < 1) n = 12;
     var ser = C.planSeries(L, first, n, opts);
     h += '<div class="card"><div class="card-h"><span class="t">' + T('Все бюджетные периоды', 'All budget periods') + '</span></div><div class="tbl-wrap"><table class="tbl"><tr><th>' + T('Месяц', 'Month') + '</th><th class="r">' + T('Поступления', 'Income') + '</th><th class="r">' + T('Выплаты', 'Out') + '</th><th class="r">' + T('Остаток', 'Result') + '</th><th class="r">' + T('Накопительно', 'Cumulative') + '</th></tr>' +
       ser.map(function (r) { return '<tr' + (r.ym === ym ? ' style="background:var(--card2)"' : '') + '><td>' + esc(App.fymShort(r.ym)) + '</td><td class="r num">' + esc(F(r.income, 'AED', { dec: 0 })) + '</td><td class="r num">' + esc(F(-r.out, 'AED', { dec: 0 })) + '</td><td class="r num ' + (r.result < 0 ? 'neg' : 'pos') + '">' + esc(F(r.result)) + '</td><td class="r num ' + (r.cumulative < 0 ? 'neg' : '') + '">' + esc(F(r.cumulative)) + '</td></tr>'; }).join('') + '</table></div>' +
@@ -253,12 +256,12 @@
     if (pot) h += '<div class="card"><div class="card-h"><span class="t">' + T('После закрытия краткосрочных долгов', 'After short-term debts are closed') + '</span></div>' + kv(T('Потенциальный ежемесячный остаток', 'Potential monthly surplus'), F(pot.monthly)) + pot.rows.map(function (r) { return kv(T('Конец ', 'End of ') + App.fym(C.addMonths(r.ym, -1)) + ' → ' + App.fymShort(r.ym), F(r.cum)); }).join('') + kv(T('Потенциальные накопления за ', 'Potential savings over ') + pot.rows.length + T(' бюджетных периодов', ' budget periods'), '<b class="sav">' + esc(F(pot.total)) + '</b>', true) + '<div class="tiny muted mt8">' + T('Это потенциально зарезервированные остатки бюджетных периодов, а не гарантированные фактические накопления.', 'These are potential reserved period surpluses, not guaranteed actual savings.') + '</div></div>';
     return { title: T('Бюджетные периоды', 'Budget periods'), html: h };
   };
-  /* potential savings: periods after the last planned short-term debt payment, up to 5 */
+  /* potential savings: periods after the last planned short-term debt payment, up to 12 */
   App.potentialSavings = function (L, opts) {
     var lastShort = ''; L.planned.forEach(function (p) { var a = C.byId(L.accounts, p.accountId); if (p.kind === 'payment' && a && a.term !== 'long' && C.plannedIncluded(p, opts) && p.budgetMonth > lastShort) lastShort = p.budgetMonth; });
     if (!lastShort) return null;
     var start = C.addMonths(lastShort, 1), last = C.lastPlanMonth(L), rows = [], cum = 0;
-    for (var ym = start; ym <= last && rows.length < 5; ym = C.addMonths(ym, 1)) { var r = C.monthPlan(L, ym, opts).result; cum += r; rows.push({ ym: ym, result: r, cum: cum }); }
+    for (var ym = start; ym <= last && rows.length < 12; ym = C.addMonths(ym, 1)) { var r = C.monthPlan(L, ym, opts).result; cum += r; rows.push({ ym: ym, result: r, cum: cum }); }
     if (!rows.length) return null;
     return { monthly: rows[0].result, rows: rows, total: cum };
   };

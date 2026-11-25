@@ -152,8 +152,8 @@
   }
 
   function chartsCard(V, m) {
-    var ym0 = C.ymOf(S.today), rows = C.planSeries(V, ym0, 6, { today: S.today, scenarios: S.ui.scen.reborrow ? ['reborrow'] : [] });
-    var bars = CH.bars({ id: 'v3flow', height: 150, groups: rows.map(function (r) { return { label: App.fymShort(r.ym), tip: App.fym(r.ym) + ' · ' + T('итог ', 'result ') + App.FS(r.result), values: [{ v: r.income, color: 'var(--income)', name: T('Поступления', 'Inflows') }, { v: r.out, color: 'var(--expense)', name: T('Обязательства', 'Obligations') }] }; }),
+    var ym0 = C.simStartYm(V, S.today), rows = C.planSeries(V, ym0, 12, { today: S.today, scenarios: S.ui.scen.reborrow ? ['reborrow'] : [] });
+    var bars = CH.bars({ id: 'v3flow', height: 150, valueLabels: true, minGroup: 48, groups: rows.map(function (r) { return { label: App.fymTiny(r.ym), valueLabel: F(r.result, 'AED', { dec: 0 }), tip: App.fym(r.ym) + ' · ' + T('итог ', 'result ') + App.FS(r.result), values: [{ v: r.income, color: 'var(--income)', name: T('Поступления', 'Inflows') }, { v: r.out, color: 'var(--expense)', name: T('Обязательства', 'Obligations') }] }; }),
       fmtTip: function (v) { return F(v); }, legend: [{ name: T('Поступления', 'Inflows'), color: 'var(--income)' }, { name: T('Обязательства', 'Obligations'), color: 'var(--expense)' }] });
     // debt & net worth projection by plan (no new events assumed)
     var proj = debtProjection(V, 12), pts = proj.map(function (p) { return { x: p.ym + '-01', y: -p.debt + m.own }; });

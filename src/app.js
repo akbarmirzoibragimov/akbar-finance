@@ -28,6 +28,7 @@
   };
   App.fym = function (ym) { var dt = new Date(+ym.slice(0, 4), +ym.slice(5, 7) - 1, 1); var s = dt.toLocaleDateString(lang() === 'en' ? 'en-GB' : 'ru-RU', { month: 'long', year: 'numeric' }); return s.charAt(0).toUpperCase() + s.slice(1).replace(' г.', ''); };
   App.fymShort = function (ym) { var dt = new Date(+ym.slice(0, 4), +ym.slice(5, 7) - 1, 1); return dt.toLocaleDateString(lang() === 'en' ? 'en-GB' : 'ru-RU', { month: 'short' }).replace('.', '') + (ym.slice(2, 4) !== S.today.slice(2, 4) ? ' ' + ym.slice(2, 4) : ''); };
+  App.fymTiny = function (ym) { var dt = new Date(+ym.slice(0, 4), +ym.slice(5, 7) - 1, 1); return dt.toLocaleDateString(lang() === 'en' ? 'en-GB' : 'ru-RU', { month: 'short' }).replace('.', '') + ' ' + ym.slice(2, 4); };
   App.pct = function (x, d) { return x == null || !isFinite(x) ? '—' : (x * 100).toFixed(d == null ? 1 : d).replace('.', lang() === 'en' ? '.' : ',') + '%'; };
   App.acc = function (id) { return S.L && C.byId(S.L.accounts, id); };
   App.cat = function (id) { return S.L && C.byId(S.L.categories, id); };

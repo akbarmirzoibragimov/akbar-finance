@@ -41,13 +41,17 @@
     return '<div class="legend">' + series.filter(function (s) { return s.name; }).map(function (s) { return '<span><i class="' + (s.dashed ? 'dash' : '') + '" style="' + (s.dashed ? 'border-color:' : 'background:') + s.color + '"></i>' + esc(s.name) + '</span>'; }).join('') + '</div>';
   }
   function bars(o) {
-    var H = o.height || 160, padT = 10, padB = 22, n = o.groups.length;
+    var n = o.groups.length;
     if (!n) return '<div class="empty">' + esc(o.empty || '—') + '</div>';
+    var valueLabels = !!o.valueLabels, padT = valueLabels ? 14 : 10, padB = valueLabels ? 36 : 22;
+    var H = (o.height || 160) + (valueLabels ? 16 : 0);
+    var minG = o.minGroup || (valueLabels ? 40 : 28);
+    var CW = Math.max(W, n * minG);
     var vals = []; o.groups.forEach(function (gr) { gr.values.forEach(function (v) { vals.push(v.v); }); });
     var max = Math.max.apply(null, vals.concat([0])), min = Math.min.apply(null, vals.concat([0])); if (max === min) max = min + 1;
     var sy = function (v) { return padT + (1 - (v - min) / (max - min)) * (H - padT - padB); };
-    var gw = W / n, svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">';
-    svg += '<line x1="0" x2="' + W + '" y1="' + sy(0) + '" y2="' + sy(0) + '" stroke="var(--sep)"/>';
+    var gw = CW / n, svg = '<svg viewBox="0 0 ' + CW + ' ' + H + '" preserveAspectRatio="xMidYMid meet" width="100%" height="' + H + '" style="display:block;overflow:visible">';
+    svg += '<line x1="0" x2="' + CW + '" y1="' + sy(0) + '" y2="' + sy(0) + '" stroke="var(--sep)"/>';
     o.groups.forEach(function (gr, i) {
       var k = gr.values.length, bw = Math.max(2.5, Math.min(26, (gw - Math.min(8, gw * .3)) / k));
       var start = i * gw + (gw - bw * k) / 2;
@@ -55,12 +59,13 @@
         var y = sy(Math.max(0, v.v)), h = Math.abs(sy(v.v) - sy(0));
         svg += '<rect x="' + (start + j * bw + (bw > 6 ? 1 : .3)) + '" y="' + (v.v >= 0 ? y : sy(0)) + '" width="' + Math.max(1, bw - (bw > 6 ? 2 : .6)) + '" height="' + Math.max(1, h) + '" rx="3" fill="' + v.color + '"' + (v.planned ? ' fill-opacity=".28" stroke="' + v.color + '" stroke-dasharray="3 2"' : '') + '/>';
       });
-      if (n <= 14 || i % Math.ceil(n / 8) === 0) svg += '<text class="axis" x="' + (i * gw + gw / 2) + '" y="' + (H - 6) + '" text-anchor="middle">' + esc(gr.label) + '</text>';
+      if (n <= 18 || valueLabels || i % Math.ceil(n / 12) === 0) svg += '<text class="axis" x="' + (i * gw + gw / 2) + '" y="' + (H - (valueLabels ? 20 : 6)) + '" text-anchor="middle">' + esc(gr.label) + '</text>';
+      if (valueLabels && gr.valueLabel) svg += '<text class="axis" x="' + (i * gw + gw / 2) + '" y="' + (H - 6) + '" text-anchor="middle">' + esc(gr.valueLabel) + '</text>';
     });
     svg += '</svg>';
-    REG[o.id] = { type: 'bars', W: W, groups: o.groups, gw: gw, fmt: o.fmtTip };
+    REG[o.id] = { type: 'bars', W: CW, groups: o.groups, gw: gw, fmt: o.fmtTip };
     var lg = (o.legend || []).map(function (l) { return '<span><i style="background:' + l.color + (l.planned ? ';opacity:.35' : '') + '"></i>' + esc(l.name) + '</span>'; }).join('');
-    return '<div class="chart" data-chart="' + o.id + '">' + svg + '<div class="tip hidden"></div></div>' + (lg ? '<div class="legend">' + lg + '</div>' : '');
+    return '<div class="chart-scroll"><div class="chart" data-chart="' + o.id + '" style="min-width:' + CW + 'px">' + svg + '<div class="tip hidden"></div></div></div>' + (lg ? '<div class="legend">' + lg + '</div>' : '');
   }
   function donut(o) {
     var items = o.items.filter(function (i) { return i.v > 0; }), total = items.reduce(function (s, i) { return s + i.v; }, 0);
@@ -137,7 +142,7 @@
     }
     tip.innerHTML = html; tip.classList.remove('hidden');
     var tw = tip.offsetWidth; left = Math.max(tw / 2, Math.min(rect.width - tw / 2, left));
-    tip.style.left = left + 'px'; tip.style.top = '-8px'; tip.style.transform = 'translate(-50%,-100%)';
+    tip.style.left = left + 'px'; tip.style.top = '8px'; tip.style.transform = 'translate(-50%,0)';
   }
   function leave(ev) {
     var el = ev.target.closest && ev.target.closest('.chart[data-chart]'); if (!el) return;

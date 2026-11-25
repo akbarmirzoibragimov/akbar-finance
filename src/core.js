@@ -682,11 +682,94 @@
   }
 
   /* ---------- scenario simulator ---------- */
-  function scenarioCalc(s) {
-    var monthly = (s.income || 0) - (s.parents || 0) - (s.loans || 0) - (s.expenses || 0) - (s.savings || 0) - (s.other || 0);
-    var months = s.months || 5, rows = [];
-    for (var i = 1; i <= months; i++) rows.push({ n: i, cumulative: monthly * i + (s.savings || 0) * i, free: monthly * i });
-    return { monthly: monthly, total: monthly * months, savedTotal: ((s.savings || 0) + monthly) * months, rows: rows };
+  var HORIZON_MIN = 1, HORIZON_MAX = 36, HORIZON_DEFAULT = 5;
+  function clampHorizon(n) {
+    n = parseInt(n, 10);
+    if (!isFinite(n) || n < HORIZON_MIN) return HORIZON_DEFAULT;
+    return Math.max(HORIZON_MIN, Math.min(HORIZON_MAX, n));
+  }
+  /* First budget month still relevant today: roll with the calendar, but if the plan
+     starts later (income at month-end funds the next month), start there. */
+  function simStartYm(L, today) {
+    today = today || todayISO();
+    var cur = ymOf(today), first = L ? firstPlanMonth(L) : cur;
+    return (first && first > cur) ? first : cur;
+  }
+  function scenarioLineInMonth(line, ym) {
+    if (!line || !line.start || !(line.amount > 0) || !ym || ym < line.start) return 0;
+    var n = 0, x = line.start;
+    while (x < ym && n < 240) { x = addMonths(x, 1); n++; }
+    if (line.repeat === 'monthly') return n < Math.max(1, parseInt(line.count, 10) || 1) ? (line.amount || 0) : 0;
+    return n === 0 ? (line.amount || 0) : 0;
+  }
+  function scenarioLinesInMonth(lines, ym) {
+    var income = 0, expense = 0;
+    (lines || []).forEach(function (ln) {
+      var v = scenarioLineInMonth(ln, ym);
+      if (ln.kind === 'expense') expense += v; else income += v;
+    });
+    return { income: income, expense: expense };
+  }
+  function planParts(mp) {
+    var income = 0, borrow = 0, parents = 0, loans = 0, expenses = 0, other = 0;
+    (mp.items || []).forEach(function (it) {
+      if (it.kind === 'income' || it.kind === 'unplannedIn') income += it.amount;
+      else if (it.kind === 'borrow') borrow += it.amount;
+      else if (it.kind === 'family') parents += -it.amount;
+      else if (it.kind === 'payment') loans += -it.amount;
+      else if (it.kind === 'personal') expenses += -it.amount;
+      else other += -it.amount;
+    });
+    return { income: income, borrow: borrow, parents: parents, loans: loans, expenses: expenses, other: other };
+  }
+  /* Flat calc when no ledger is passed (legacy). With a ledger, each month equals
+     monthPlan (бюджетные периоды / плановые платежи) plus what-if extra lines. */
+  function scenarioCalc(s, L, today, opts) {
+    s = s || {}; opts = opts || {};
+    today = today || opts.today || todayISO();
+    var months = clampHorizon(s.months), lines = Array.isArray(s.lines) ? s.lines : [];
+    var startYm = s.startYm || (L ? simStartYm(L, today) : ymOf(today));
+    var ov = s.overrides || {};
+    var usePlan = !!(L && s.usePlan !== false);
+    var rows = [], cum = 0, i, ym, extra, result, parts, income, out, mon, saved = 0;
+    if (usePlan) {
+      for (i = 0; i < months; i++) {
+        ym = addMonths(startYm, i);
+        var mp = monthPlan(L, ym, opts);
+        parts = planParts(mp);
+        income = parts.income + parts.borrow;
+        if (ov.income) income = (s.income || 0) + parts.borrow;
+        out = mp.out;
+        if (ov.parents) out = out - parts.parents + (s.parents || 0);
+        if (ov.loans) out = out - parts.loans + (s.loans || 0);
+        if (ov.expenses) out = out - parts.expenses + (s.expenses || 0);
+        if (ov.other) out = out - parts.other + (s.other || 0);
+        extra = scenarioLinesInMonth(lines, ym);
+        result = income - out + extra.income - extra.expense;
+        if (ov.savings) result -= (s.savings || 0);
+        cum += result;
+        rows.push({ n: i + 1, ym: ym, income: income, out: out, extraIn: extra.income, extraOut: extra.expense, result: result, free: cum, cumulative: cum, parts: parts });
+      }
+      return { monthly: rows[0] ? rows[0].result : 0, total: cum, savedTotal: cum, startYm: startYm, months: months, rows: rows, fromPlan: true };
+    }
+    mon = (s.income || 0) - (s.parents || 0) - (s.loans || 0) - (s.expenses || 0) - (s.savings || 0) - (s.other || 0);
+    saved = s.savings || 0;
+    for (i = 1; i <= months; i++) {
+      ym = addMonths(startYm, i - 1);
+      extra = scenarioLinesInMonth(lines, ym);
+      result = mon + extra.income - extra.expense;
+      cum += result;
+      rows.push({ n: i, ym: ym, result: result, free: cum, cumulative: cum + saved * i, extraIn: extra.income, extraOut: extra.expense });
+    }
+    return { monthly: rows[0] ? rows[0].result : mon, total: cum, savedTotal: cum + saved * months, startYm: startYm, months: months, rows: rows, fromPlan: false };
+  }
+  function scenarioLinesTotal(lines, startYm, months, mode) {
+    var t = 0, i, e;
+    for (i = 0; i < months; i++) {
+      e = scenarioLinesInMonth(lines, addMonths(startYm, i));
+      t += mode === 'in' ? e.income : mode === 'out' ? e.expense : (e.income - e.expense);
+    }
+    return t;
   }
 
   /* ---------- goals ---------- */
@@ -730,7 +813,7 @@
       ds2.rows.forEach(function (r) { if (r.term !== 'long' && r.debt > 0) { if (!r.closeDate) ok = false; else if (r.closeDate > last) last = r.closeDate; } });
       forecast = ok ? last || null : null; forecastBasis = 'plannedPayments';
     } else if (g.type === 'reserve') {
-      var series = planSeries(L, firstPlanMonth(L), 30, { today: today });
+      var series = planSeries(L, simStartYm(L, today), 36, { today: today });
       var need = (toBase(L, g.target, gc) || 0) - (toBase(L, cur, gc) || 0), acc2 = 0;
       for (var i = 0; i < series.length; i++) {
         // only surpluses of periods after all deficits are covered (cumulative > 0) can go to the reserve
@@ -1102,6 +1185,7 @@
     var L = Object.assign(base, clone(obj));
     ['goals', 'projects', 'assets', 'changelog'].forEach(function (k) { if (!Array.isArray(L[k])) L[k] = []; });
     if (!Array.isArray(L.scenarios) || !L.scenarios.length) L.scenarios = defaultScenarios();
+    L.scenarios.forEach(function (sc) { if (!Array.isArray(sc.lines)) sc.lines = []; if (sc.months == null || sc.months === '') sc.months = HORIZON_DEFAULT; });
     L.settings = Object.assign(newLedger({}).settings, obj.settings || {});
     L.rates = Object.assign({ AED: 1 }, obj.rates || {});
     if (L.rates.UZS == null) { L.rates.UZS = 1 / 3264.51; L.rateDates = Object.assign({}, L.rateDates, { UZS: '2026-11-25' }); }
@@ -1158,7 +1242,7 @@
     unconfirmPlanned: unconfirmPlanned, makeSeries: makeSeries, amortize: amortize, metrics: metrics, upcoming: upcoming, monthPlan: monthPlan,
     planSeries: planSeries, firstPlanMonth: firstPlanMonth, lastPlanMonth: lastPlanMonth, deficitAlternatives: deficitAlternatives, dailyForecast: dailyForecast,
     spendByCategory: spendByCategory, budgetStatus: budgetStatus, debtSummary: debtSummary, payoffPlan: payoffPlan, debtProjection: debtProjection,
-    earlyPayoffImpact: earlyPayoffImpact, scenarioCalc: scenarioCalc, goalStatus: goalStatus, familyStatus: familyStatus,
+    earlyPayoffImpact: earlyPayoffImpact, clampHorizon: clampHorizon, simStartYm: simStartYm, scenarioLineInMonth: scenarioLineInMonth, scenarioLinesInMonth: scenarioLinesInMonth, planParts: planParts, scenarioCalc: scenarioCalc, HORIZON_MIN: HORIZON_MIN, HORIZON_MAX: HORIZON_MAX, HORIZON_DEFAULT: HORIZON_DEFAULT, goalStatus: goalStatus, familyStatus: familyStatus,
     healthScore: healthScore, purchaseCheck: purchaseCheck, notifications: notifications, monthReview: monthReview,
     projectStats: projectStats, assetValue: assetValue, periodRange: periodRange, flows: flows, balanceHistory: balanceHistory,
     assistant: assistant, fingerprint: fingerprint, validateLedger: validateLedger, normalizeLedger: normalizeLedger,
