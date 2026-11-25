@@ -83,7 +83,7 @@
     x += fld(T('Комментарий', 'Note'), inp('note', f.note));
     var rep = '';
     if (!p) rep = fld(T('Повторять ежемесячно', 'Repeat monthly'), chk('repeat', f.repeat, { re: 1 })) + (f.repeat ? fld(T('Количество месяцев', 'Number of months'), inp('count', f.count, { num: true })) + fld(T('Сдвиг бюджетного месяца', 'Budget month shift'), sel('bmShift', App.opts([['0', T('тот же месяц', 'same month')], ['1', T('следующий месяц', 'next month')]], f.bmShift))) : '');
-    else if (p.seriesId) rep = fld(T('Применить сумму и день к последующим платежам серии', 'Apply amount & day to later items in the series'), chk('series', f.series));
+    else if (p.seriesId) rep = fld(T('Этот и все следующие месяцы', 'This and all following months'), chk('series', f.series)) + '<div class="note">' + T('Без галочки меняется только этот месяц. Серия — в «Доходы и расходы».', 'Unchecked: only this month changes. The series lives in Income & expenses.') + '</div>';
     var h = '<div class="form">' + group('', x + rep) + '</div>';
     if (p) {
       var st = C.plannedState(L, p, S.today);
@@ -113,18 +113,21 @@
       if (m.id) {
         var p = C.byId(L.planned, m.id), oldDay = p.date.slice(8, 10);
         Object.assign(p, base);
+        var ser = p.seriesId && C.byId(L.series || [], p.seriesId);
+        if (ser) { var oym = p.occYm || C.ymOf(p.date); C.setSeriesAmount(ser, oym, amt, f.series ? 'following' : 'only', false); if (f.series) { ser.title = base.title; ser.day = +f.date.slice(8, 10); } return; }
         if (f.series && p.seriesId) L.planned.forEach(function (q) { if (q.seriesId === p.seriesId && q.date > p.date && !C.plannedState(L, q).txs.length) { q.amount = amt; q.interestPart = base.interestPart ? Math.round(amt * base.interestPart / amt) : q.interestPart; var ym = q.date.slice(0, 7); q.date = ym + '-' + ('0' + Math.min(+f.date.slice(8, 10), C.daysInMonth(ym))).slice(-2); } });
         void oldDay;
       } else {
         var tpl = Object.assign({ kind: f.kind, currency: 'AED', scenario: null, confirmed: false }, base);
-        if (f.repeat) C.makeSeries({ startDate: f.date, count: Math.max(1, Math.min(120, parseInt(f.count, 10) || 1)), budgetShift: +f.bmShift, template: tpl }).forEach(function (q) { q.dateConfirmed = base.dateConfirmed; L.planned.push(q); });
+        if (f.repeat && C.newSeries) { var ns = C.newSeries({ kind: f.kind, title: base.title, amount: amt, freq: 'monthly', start: C.ymOf(f.date), count: Math.max(1, Math.min(120, parseInt(f.count, 10) || 1)), day: +f.date.slice(8, 10), budgetShift: +f.bmShift, accountId: base.accountId, fromAccountId: base.fromAccountId, toAccountId: base.toAccountId, categoryId: base.categoryId, note: base.note }); L.series = L.series || []; L.series.push(ns); }
+        else if (f.repeat) C.makeSeries({ startDate: f.date, count: Math.max(1, Math.min(120, parseInt(f.count, 10) || 1)), budgetShift: +f.bmShift, template: tpl }).forEach(function (q) { q.dateConfirmed = base.dateConfirmed; L.planned.push(q); });
         else L.planned.push(Object.assign({ id: C.uid('pl') }, tpl));
       }
     });
     App.closeModal();
   };
   App.actions.skipPlanned = function () { var id = S.modal.id; App.closeModal(); App.commit(T('Статус плана изменён', 'Plan status changed'), function (L) { var p = C.byId(L.planned, id); p.status = p.status === 'skipped' ? null : 'skipped'; }); };
-  App.actions.deletePlanned = function () { var id = S.modal.id; App.confirm(T('Удалить из плана?', 'Delete from plan?'), T('Плановая операция будет удалена.', 'The planned item will be removed.'), function () { App.commit(T('Удалено из плана', 'Removed from plan'), function (L) { L.planned = L.planned.filter(function (p) { return p.id !== id; }); }); }, true, T('Удалить', 'Delete')); };
+  App.actions.deletePlanned = function () { var id = S.modal.id; App.confirm(T('Удалить из плана?', 'Delete from plan?'), T('Плановая операция будет удалена.', 'The planned item will be removed.'), function () { App.commit(T('Удалено из плана', 'Removed from plan'), function (L) { var dp = C.byId(L.planned, id), ds = dp && dp.seriesId && C.byId(L.series || [], dp.seriesId); if (ds) { ds.removed = ds.removed || {}; ds.removed[dp.occYm || C.ymOf(dp.date)] = 1; } L.planned = L.planned.filter(function (p) { return p.id !== id; }); }); }, true, T('Удалить', 'Delete')); };
   App.actions.unconfirmPlanned = function () { var id = S.modal.id; App.closeModal(); App.commit(T('Подтверждение отменено', 'Confirmation undone'), function (L) { return C.unconfirmPlanned(L, id); }); };
 
   /* ---------- reconcile with a bank statement ---------- */

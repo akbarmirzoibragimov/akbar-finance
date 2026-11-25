@@ -402,3 +402,15 @@ a.row{color:var(--text);text-decoration:none}
 .stepper button{width:34px;height:34px;border-radius:8px;background:var(--card2);color:var(--text);font-size:22px;line-height:1;flex:none;padding:0}
 .stepper input.in{width:4.2em;text-align:center;flex:none;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
 .stepper input.in::-webkit-outer-spin-button,.stepper input.in::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+/* 3.3 planning blocks edit mode + series */
+.row.blk{gap:6px;cursor:default}
+.row.blk.off .t1{color:var(--text2,#8e8e93)}
+.row.blk .iconbtn.sm{width:32px;height:32px;flex:none}
+.row.blk .iconbtn[disabled]{opacity:.3}
+.row.blk .chip{flex:none;margin:0}
+.btns.col{flex-direction:column}
+.btns.col .btn{width:100%}
+.sec-h .link{display:inline-flex;align-items:center;gap:4px;color:var(--accent,#0a84ff);font-size:14px;background:none}
+.mb8{margin-bottom:8px}
+.row.ser-row .t2{white-space:normal;overflow:visible;text-overflow:clip}
+.row.blk .chip{min-width:92px;justify-content:center;text-align:center}

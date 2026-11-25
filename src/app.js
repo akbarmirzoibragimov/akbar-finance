@@ -68,7 +68,7 @@
   App.commit = function (label, fn, opts) {
     var before = JSON.stringify(S.L);
     var res;
-    try { res = fn(S.L); } catch (e) { S.L = JSON.parse(before); App.toast(T('Ошибка: ', 'Error: ') + e.message); return { ok: false }; }
+    try { res = fn(S.L); if (!(res && res.ok === false) && C.syncSeries) C.syncSeries(S.L, S.today); } catch (e) { S.L = JSON.parse(before); App.toast(T('Ошибка: ', 'Error: ') + e.message); return { ok: false }; }
     if (res && res.ok === false) { S.L = JSON.parse(before); return res; }
     if (!(opts && opts.nolog)) C.log(S.L, 'ui', label);
     S.undo.push({ label: label, data: before }); if (S.undo.length > 30) S.undo.shift();
@@ -190,7 +190,7 @@
     });
   };
   App.setLedger = function (L, reason) {
-    var prev = S.L;
+    var prev = S.L; if (C.prepareLedger && L) C.prepareLedger(L, S.today);
     var p = prev ? AFDB.addSnapshot('before:' + reason, prev) : Promise.resolve();
     return p.then(function () {
       S.L = L; S.undo = []; S.stack = []; S.tab = 'home';
@@ -241,7 +241,7 @@
     App.applyTheme();
     AFDB.open().then(function () { return AFDB.get('ledger'); }).then(function (L) {
       if (L) {
-        var n = C.normalizeLedger(L); S.L = n.ledger;
+        var n = C.normalizeLedger(L, { today: S.today }); S.L = n.ledger; if (C.prepareLedger) C.prepareLedger(S.L, S.today);
         // daily automatic snapshot
         var key = 'snap:' + S.today;
         return AFDB.get('lastSnap').then(function (ls) { if (ls !== key) return AFDB.addSnapshot('auto', S.L).then(function () { return AFDB.set('lastSnap', key); }); });

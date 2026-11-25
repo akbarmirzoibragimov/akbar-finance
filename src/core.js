@@ -830,7 +830,7 @@
 
   /* ---------- family support ---------- */
   function familyStatus(L, today) {
-    var plans = L.planned.filter(function (p) { return p.kind === 'family'; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+    var famEnd = addMonths(ymOf(today || todayISO()), 11); var plans = L.planned.filter(function (p) { return p.kind === 'family' && ymOf(p.date) <= famEnd; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; });
     var planTotal = sum(plans, function (p) { return p.amount; });
     var sentPlanned = sum(plans, function (p) { return plannedState(L, p, today).paid; });
     var txs = L.transactions.filter(function (t) { return t.status !== 'void' && t.type === 'family'; });

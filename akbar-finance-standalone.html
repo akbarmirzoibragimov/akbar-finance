@@ -420,13 +420,25 @@ a.row{color:var(--text);text-decoration:none}
 .stepper button{width:34px;height:34px;border-radius:8px;background:var(--card2);color:var(--text);font-size:22px;line-height:1;flex:none;padding:0}
 .stepper input.in{width:4.2em;text-align:center;flex:none;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
 .stepper input.in::-webkit-outer-spin-button,.stepper input.in::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+/* 3.3 planning blocks edit mode + series */
+.row.blk{gap:6px;cursor:default}
+.row.blk.off .t1{color:var(--text2,#8e8e93)}
+.row.blk .iconbtn.sm{width:32px;height:32px;flex:none}
+.row.blk .iconbtn[disabled]{opacity:.3}
+.row.blk .chip{flex:none;margin:0}
+.btns.col{flex-direction:column}
+.btns.col .btn{width:100%}
+.sec-h .link{display:inline-flex;align-items:center;gap:4px;color:var(--accent,#0a84ff);font-size:14px;background:none}
+.mb8{margin-bottom:8px}
+.row.ser-row .t2{white-space:normal;overflow:visible;text-overflow:clip}
+.row.blk .chip{min-width:92px;justify-content:center;text-align:center}
 
 </style>
 </head>
 <body>
 <div id="app"><div class="boot-splash">Akbar Finance</div></div>
 <nav id="tabbar" class="tabbar"></nav>
-<button id="fab" class="fab hidden" data-a="modal" data-m="record" aria-label="Добавить запись"></button>
+<button id="fab" class="fab hidden" data-a="modal" data-m="fabChooser" aria-label="Добавить"></button>
 <div id="sheet" class="hidden"></div>
 <div id="toast" class="toast hidden" role="status"></div>
 <script>window.AF_STANDALONE = true;</script>
@@ -1263,7 +1275,7 @@ a.row{color:var(--text);text-decoration:none}
 
   /* ---------- family support ---------- */
   function familyStatus(L, today) {
-    var plans = L.planned.filter(function (p) { return p.kind === 'family'; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+    var famEnd = addMonths(ymOf(today || todayISO()), 11); var plans = L.planned.filter(function (p) { return p.kind === 'family' && ymOf(p.date) <= famEnd; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; });
     var planTotal = sum(plans, function (p) { return p.amount; });
     var sentPlanned = sum(plans, function (p) { return plannedState(L, p, today).paid; });
     var txs = L.transactions.filter(function (t) { return t.status !== 'void' && t.type === 'family'; });
@@ -1918,6 +1930,199 @@ a.row{color:var(--text);text-decoration:none}
 
 </script>
 <script>
+/* Akbar Finance 3.3 — income/expense series (single source of truth for planned items) and Planning blocks.
+   A series generates planned occurrences in L.planned (ids `${seriesId}_${ym}`), so every existing view
+   (Плановые платежи, бюджетные периоды, симулятор, главная, Debt Freedom) reads the same numbers.
+   Pure functions; works in the browser (extends AFCore) and in Node. Amounts in integer fils. */
+(function (root, factory) {
+  var C = (typeof module === 'object' && module.exports) ? require('./core2.js') : root.AFCore;
+  var ext = factory(C);
+  Object.keys(ext).forEach(function (k) { C[k] = ext[k]; });
+  if (typeof module === 'object' && module.exports) module.exports = C;
+})(typeof self !== 'undefined' ? self : this, function (C) {
+  'use strict';
+  var byId = C.byId, addMonths = C.addMonths, ymOf = C.ymOf;
+  var SERIES_KINDS = ['income', 'payment', 'family'];
+  var HORIZON = 36; // open-ended series are materialised this many months ahead of today (rolling)
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function monthsBetween(a, b) { return (+b.slice(0, 4) - +a.slice(0, 4)) * 12 + (+b.slice(5, 7) - +a.slice(5, 7)); }
+  function occYm(p) { return p.occYm || ymOf(p.date); }
+
+  /* ---------- amounts ---------- */
+  function baseAmount(s, ym) {
+    var st = (s.steps || []).slice().sort(function (a, b) { return a.from < b.from ? -1 : 1; }), v = null;
+    for (var i = 0; i < st.length; i++) { if (st[i].from <= ym) v = st[i].amount; }
+    if (v == null) v = st.length ? st[0].amount : 0;
+    return v == null ? 0 : v;
+  }
+  function amountFor(s, ym) {
+    if (s.overrides && Object.prototype.hasOwnProperty.call(s.overrides, ym)) return s.overrides[ym] || 0;
+    return baseAmount(s, ym);
+  }
+  function isOverridden(s, ym) { return !!(s.overrides && Object.prototype.hasOwnProperty.call(s.overrides, ym)); }
+  function amountUnset(s) { return !(s.steps || []).some(function (x) { return x.amount > 0; }) && !Object.keys(s.overrides || {}).some(function (k) { return s.overrides[k] > 0; }); }
+  function seriesEnd(s, today) {
+    if (s.freq === 'once') return s.start;
+    if (s.end) return s.end;
+    var h = addMonths(ymOf(today || C.todayISO()), HORIZON - 1);
+    return h < s.start ? s.start : h;
+  }
+  function seriesMonths(s, today) {
+    var out = [], end = seriesEnd(s, today), ym = s.start, n = 0;
+    while (ym <= end && n < 600) { if (!(s.removed && s.removed[ym])) out.push(ym); ym = addMonths(ym, 1); n++; }
+    return out;
+  }
+  function occDate(s, ym) { var day = Math.max(1, Math.min(31, s.day || 1)); return ym + '-' + pad(Math.min(day, C.daysInMonth(ym))); }
+
+  /* ---------- sync series -> planned occurrences ---------- */
+  function lockedMap(L) {
+    var m = {};
+    L.transactions.forEach(function (t) { if (t.status !== 'void' && t.plannedId) m[t.plannedId] = 1; });
+    return m;
+  }
+  function isLocked(p, locked) { return !!(locked[p.id] || p.confirmed || p.status === 'skipped'); }
+  function syncSeries(L, today) {
+    if (!Array.isArray(L.series)) L.series = [];
+    today = today || C.todayISO();
+    var locked = lockedMap(L), sMap = {}, byOcc = {};
+    L.series.forEach(function (s) { sMap[s.id] = s; });
+    L.planned.forEach(function (p) { if (p.seriesId && sMap[p.seriesId]) byOcc[p.seriesId + '|' + occYm(p)] = p; });
+    var keep = {};
+    L.series.forEach(function (s) {
+      seriesMonths(s, today).forEach(function (ym) {
+        var k = s.id + '|' + ym, p = byOcc[k], amt = amountFor(s, ym);
+        if (p) {
+          keep[p.id] = 1;
+          if (!isLocked(p, locked)) {
+            p.amount = amt; p.title = s.title;
+            if (s.accountId !== undefined && p.kind === 'payment') p.accountId = s.accountId || null;
+          }
+          return;
+        }
+        var np = { id: s.id + '_' + ym, seriesId: s.id, occYm: ym, kind: s.kind, title: s.title, amount: amt, date: occDate(s, ym), budgetMonth: addMonths(ym, s.budgetShift || 0), currency: s.currency || 'AED', scenario: null, confirmed: false, dateConfirmed: s.dateConfirmed !== false, note: s.note || '' };
+        if (s.kind === 'payment') { np.accountId = s.accountId || null; np.fromAccountId = s.fromAccountId || null; np.categoryId = s.accountId ? null : (s.categoryId || 'misc'); }
+        if (s.kind === 'family') np.fromAccountId = s.fromAccountId || null;
+        if (s.kind === 'income') { np.toAccountId = s.toAccountId || null; if (s.categoryId) np.categoryId = s.categoryId; }
+        while (byId(L.planned, np.id)) np.id += 'x';
+        L.planned.push(np); keep[np.id] = 1;
+      });
+    });
+    // drop occurrences that no series wants any more, unless they carry real money
+    L.planned = L.planned.filter(function (p) { return !p.seriesId || !sMap[p.seriesId] || keep[p.id] || isLocked(p, locked); });
+    return L;
+  }
+
+  /* ---------- migration of an existing ledger (old planned items -> series), no data loss ---------- */
+  function normTitle(t) { return String(t || '').trim().toLowerCase(); }
+  function migrateSeries(L, today) {
+    if (!Array.isArray(L.series)) L.series = [];
+    if (L.seriesVersion >= 1) return { migrated: 0 };
+    var known = {}; L.series.forEach(function (s) { known[s.id] = 1; });
+    var groups = {}, order = [];
+    L.planned.forEach(function (p) {
+      if (p.scenario || SERIES_KINDS.indexOf(p.kind) < 0) return;
+      if (p.seriesId && known[p.seriesId]) return;
+      var k = p.kind + '|' + (p.accountId || '') + '|' + normTitle(p.title);
+      if (!groups[k]) { groups[k] = []; order.push(k); }
+      groups[k].push(p);
+    });
+    var made = 0, lastIncomeYm = '';
+    L.planned.forEach(function (p) { if (p.kind === 'income' && !p.scenario && ymOf(p.date) > lastIncomeYm) lastIncomeYm = ymOf(p.date); });
+    order.forEach(function (k) {
+      var items = groups[k].slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+      // one occurrence per calendar month; extra items in the same month become their own one-off series
+      var main = [], extra = [], seen = {};
+      items.forEach(function (p) { var ym = ymOf(p.date); if (seen[ym]) extra.push(p); else { seen[ym] = 1; main.push(p); } });
+      var mk = function (list) {
+        var first = list[0], last = list[list.length - 1], start = ymOf(first.date), end = ymOf(last.date);
+        var contiguous = monthsBetween(start, end) === list.length - 1;
+        var shifts = {}; list.forEach(function (p) { var d = monthsBetween(ymOf(p.date), p.budgetMonth || ymOf(p.date)); shifts[d] = (shifts[d] || 0) + 1; });
+        var shift = +Object.keys(shifts).sort(function (a, b) { return shifts[b] - shifts[a]; })[0] || 0;
+        var lastDay = +last.date.slice(8, 10), day = lastDay >= C.daysInMonth(ymOf(last.date)) ? 31 : lastDay;
+        var openEnded = list.length >= 3 && contiguous && (first.kind === 'income' || first.kind === 'family') && end >= lastIncomeYm && !!lastIncomeYm;
+        var steps = [], prev = null;
+        list.forEach(function (p) { if (p.amount !== prev) { steps.push({ from: ymOf(p.date), amount: p.amount }); prev = p.amount; } });
+        var removed = {};
+        if (list.length > 1) { var have = {}; list.forEach(function (p) { have[ymOf(p.date)] = 1; }); for (var ym = start; ym <= end; ym = addMonths(ym, 1)) if (!have[ym]) removed[ym] = 1; }
+        var sid = first.seriesId && !known[first.seriesId] ? first.seriesId : C.uid('ser');
+        var s = { id: sid, kind: first.kind, title: first.title, currency: first.currency || 'AED', freq: list.length === 1 ? 'once' : 'monthly', start: start, end: list.length === 1 ? start : (openEnded ? null : end),
+          day: day, budgetShift: shift, steps: steps, overrides: {}, removed: removed, accountId: first.accountId || null, fromAccountId: first.fromAccountId || null, toAccountId: first.toAccountId || null,
+          categoryId: first.categoryId || null, note: first.note || '', dateConfirmed: first.dateConfirmed !== false, migrated: true };
+        known[sid] = 1; L.series.push(s); made++;
+        list.forEach(function (p) { p.seriesId = sid; p.occYm = ymOf(p.date); });
+      };
+      if (main.length) mk(main);
+      extra.forEach(function (p) { mk([p]); });
+    });
+    L.seriesVersion = 1;
+    return { migrated: made };
+  }
+
+  /* ---------- edits ---------- */
+  function newSeries(o) {
+    var s = { id: o.id || C.uid('ser'), kind: SERIES_KINDS.indexOf(o.kind) >= 0 ? o.kind : 'payment', title: o.title || '', currency: o.currency || 'AED', freq: o.freq === 'once' ? 'once' : 'monthly',
+      start: o.start, end: o.freq === 'once' ? o.start : (o.end || null), day: o.day || (o.kind === 'income' ? 31 : 1), budgetShift: o.budgetShift != null ? o.budgetShift : (o.kind === 'income' && (o.day || 31) >= 25 ? 1 : 0),
+      steps: [{ from: o.start, amount: o.amount == null ? 0 : o.amount }], overrides: {}, removed: {}, accountId: o.accountId || null, fromAccountId: o.fromAccountId || null, toAccountId: o.toAccountId || null,
+      categoryId: o.categoryId || null, note: o.note || '', dateConfirmed: true };
+    if (s.freq === 'monthly' && o.count) s.end = addMonths(o.start, Math.max(1, o.count) - 1);
+    return s;
+  }
+  function laterOverrides(s, ym) { return Object.keys(s.overrides || {}).filter(function (k) { return k > ym; }).sort(); }
+  /* mode: 'only' | 'following'. For 'following' later per-month overrides are cleared only when clearLater is true. */
+  function setSeriesAmount(s, ym, amount, mode, clearLater) {
+    s.overrides = s.overrides || {};
+    if (mode === 'only') { if (amount === baseAmount(s, ym)) delete s.overrides[ym]; else s.overrides[ym] = amount; return s; }
+    s.steps = (s.steps || []).filter(function (x) { return x.from < ym; });
+    s.steps.push({ from: ym, amount: amount });
+    delete s.overrides[ym];
+    if (clearLater) laterOverrides(s, ym).forEach(function (k) { delete s.overrides[k]; });
+    return s;
+  }
+  function resetSeriesMonth(s, ym) { if (s.overrides) delete s.overrides[ym]; return s; }
+  function seriesSummary(L, s, today) {
+    var months = seriesMonths(s, today);
+    return { months: months, next: months.filter(function (ym) { return ym >= ymOf(today || C.todayISO()); })[0] || null, unset: amountUnset(s), current: amountFor(s, ymOf(today || C.todayISO())) };
+  }
+
+  /* ---------- Planning blocks (display/compose only; never own numbers) ---------- */
+  var CORE_BLOCKS = ['series', 'planned', 'budgets', 'income', 'calendar', 'goals', 'debts', 'family', 'monthplan', 'simulator', 'purchase'];
+  var GUARDED = ['debts', 'family'];
+  function ensureBlocks(L) {
+    L.settings = L.settings || {};
+    var b = Array.isArray(L.settings.planBlocks) ? L.settings.planBlocks : [];
+    var have = {}; b.forEach(function (x) { have[x.id] = 1; });
+    CORE_BLOCKS.forEach(function (id) { if (!have[id]) b.push({ id: id, type: id, hidden: false }); });
+    L.settings.planBlocks = b;
+    return b;
+  }
+  function moveBlock(L, id, d) {
+    var b = ensureBlocks(L), i = b.map(function (x) { return x.id; }).indexOf(id), j = i + d;
+    if (i < 0 || j < 0 || j >= b.length) return false;
+    var t = b[i]; b[i] = b[j]; b[j] = t; return true;
+  }
+  function setBlockHidden(L, id, hidden) { var x = ensureBlocks(L).filter(function (q) { return q.id === id; })[0]; if (!x) return false; x.hidden = !!hidden; return true; }
+  function addBlock(L, o) { var b = ensureBlocks(L), x = { id: C.uid('blk'), type: o.type, hidden: false, title: o.title || '', ref: o.ref || null, refs: o.refs || [] }; b.push(x); return x; }
+  function removeBlock(L, id) { var b = ensureBlocks(L), x = b.filter(function (q) { return q.id === id; })[0]; if (!x || CORE_BLOCKS.indexOf(x.type) >= 0) return false; L.settings.planBlocks = b.filter(function (q) { return q.id !== id; }); return true; }
+
+  return { SERIES_KINDS: SERIES_KINDS, SERIES_HORIZON: HORIZON, seriesBaseAmount: baseAmount, seriesAmountFor: amountFor, seriesIsOverridden: isOverridden, seriesAmountUnset: amountUnset,
+    seriesMonths: seriesMonths, seriesEnd: seriesEnd, syncSeries: syncSeries, migrateSeries: migrateSeries, newSeries: newSeries, setSeriesAmount: setSeriesAmount, resetSeriesMonth: resetSeriesMonth,
+    seriesLaterOverrides: laterOverrides, seriesSummary: seriesSummary, CORE_BLOCKS: CORE_BLOCKS, GUARDED_BLOCKS: GUARDED, ensureBlocks: ensureBlocks, moveBlock: moveBlock,
+    setBlockHidden: setBlockHidden, addBlock: addBlock, removeBlock: removeBlock, prepareLedger: function (L, today) { migrateSeries(L, today); syncSeries(L, today); ensureBlocks(L); return L; } };
+});
+/* hook: every load/import path goes through normalizeLedger, so migration happens there too */
+(function (C) {
+  if (!C || C._seriesHooked) return;
+  var orig = C.normalizeLedger;
+  C.normalizeLedger = function (obj, opts) {
+    var r = orig.apply(this, arguments);
+    if (r && r.ledger) C.prepareLedger(r.ledger, (opts && opts.today) || C.todayISO());
+    return r;
+  };
+  C._seriesHooked = true;
+})(typeof module === 'object' && module.exports ? module.exports : (typeof self !== 'undefined' ? self : this).AFCore);
+
+</script>
+<script>
 /* Minimal stroke icons (own drawings, 24x24) */
 (function (g) {
   var P = {
@@ -2302,7 +2507,7 @@ a.row{color:var(--text);text-decoration:none}
   App.commit = function (label, fn, opts) {
     var before = JSON.stringify(S.L);
     var res;
-    try { res = fn(S.L); } catch (e) { S.L = JSON.parse(before); App.toast(T('Ошибка: ', 'Error: ') + e.message); return { ok: false }; }
+    try { res = fn(S.L); if (!(res && res.ok === false) && C.syncSeries) C.syncSeries(S.L, S.today); } catch (e) { S.L = JSON.parse(before); App.toast(T('Ошибка: ', 'Error: ') + e.message); return { ok: false }; }
     if (res && res.ok === false) { S.L = JSON.parse(before); return res; }
     if (!(opts && opts.nolog)) C.log(S.L, 'ui', label);
     S.undo.push({ label: label, data: before }); if (S.undo.length > 30) S.undo.shift();
@@ -2424,7 +2629,7 @@ a.row{color:var(--text);text-decoration:none}
     });
   };
   App.setLedger = function (L, reason) {
-    var prev = S.L;
+    var prev = S.L; if (C.prepareLedger && L) C.prepareLedger(L, S.today);
     var p = prev ? AFDB.addSnapshot('before:' + reason, prev) : Promise.resolve();
     return p.then(function () {
       S.L = L; S.undo = []; S.stack = []; S.tab = 'home';
@@ -2475,7 +2680,7 @@ a.row{color:var(--text);text-decoration:none}
     App.applyTheme();
     AFDB.open().then(function () { return AFDB.get('ledger'); }).then(function (L) {
       if (L) {
-        var n = C.normalizeLedger(L); S.L = n.ledger;
+        var n = C.normalizeLedger(L, { today: S.today }); S.L = n.ledger; if (C.prepareLedger) C.prepareLedger(S.L, S.today);
         // daily automatic snapshot
         var key = 'snap:' + S.today;
         return AFDB.get('lastSnap').then(function (ls) { if (ls !== key) return AFDB.addSnapshot('auto', S.L).then(function () { return AFDB.set('lastSnap', key); }); });
@@ -3057,7 +3262,7 @@ a.row{color:var(--text);text-decoration:none}
     x += fld(T('Комментарий', 'Note'), inp('note', f.note));
     var rep = '';
     if (!p) rep = fld(T('Повторять ежемесячно', 'Repeat monthly'), chk('repeat', f.repeat, { re: 1 })) + (f.repeat ? fld(T('Количество месяцев', 'Number of months'), inp('count', f.count, { num: true })) + fld(T('Сдвиг бюджетного месяца', 'Budget month shift'), sel('bmShift', App.opts([['0', T('тот же месяц', 'same month')], ['1', T('следующий месяц', 'next month')]], f.bmShift))) : '');
-    else if (p.seriesId) rep = fld(T('Применить сумму и день к последующим платежам серии', 'Apply amount & day to later items in the series'), chk('series', f.series));
+    else if (p.seriesId) rep = fld(T('Этот и все следующие месяцы', 'This and all following months'), chk('series', f.series)) + '<div class="note">' + T('Без галочки меняется только этот месяц. Серия — в «Доходы и расходы».', 'Unchecked: only this month changes. The series lives in Income & expenses.') + '</div>';
     var h = '<div class="form">' + group('', x + rep) + '</div>';
     if (p) {
       var st = C.plannedState(L, p, S.today);
@@ -3087,18 +3292,21 @@ a.row{color:var(--text);text-decoration:none}
       if (m.id) {
         var p = C.byId(L.planned, m.id), oldDay = p.date.slice(8, 10);
         Object.assign(p, base);
+        var ser = p.seriesId && C.byId(L.series || [], p.seriesId);
+        if (ser) { var oym = p.occYm || C.ymOf(p.date); C.setSeriesAmount(ser, oym, amt, f.series ? 'following' : 'only', false); if (f.series) { ser.title = base.title; ser.day = +f.date.slice(8, 10); } return; }
         if (f.series && p.seriesId) L.planned.forEach(function (q) { if (q.seriesId === p.seriesId && q.date > p.date && !C.plannedState(L, q).txs.length) { q.amount = amt; q.interestPart = base.interestPart ? Math.round(amt * base.interestPart / amt) : q.interestPart; var ym = q.date.slice(0, 7); q.date = ym + '-' + ('0' + Math.min(+f.date.slice(8, 10), C.daysInMonth(ym))).slice(-2); } });
         void oldDay;
       } else {
         var tpl = Object.assign({ kind: f.kind, currency: 'AED', scenario: null, confirmed: false }, base);
-        if (f.repeat) C.makeSeries({ startDate: f.date, count: Math.max(1, Math.min(120, parseInt(f.count, 10) || 1)), budgetShift: +f.bmShift, template: tpl }).forEach(function (q) { q.dateConfirmed = base.dateConfirmed; L.planned.push(q); });
+        if (f.repeat && C.newSeries) { var ns = C.newSeries({ kind: f.kind, title: base.title, amount: amt, freq: 'monthly', start: C.ymOf(f.date), count: Math.max(1, Math.min(120, parseInt(f.count, 10) || 1)), day: +f.date.slice(8, 10), budgetShift: +f.bmShift, accountId: base.accountId, fromAccountId: base.fromAccountId, toAccountId: base.toAccountId, categoryId: base.categoryId, note: base.note }); L.series = L.series || []; L.series.push(ns); }
+        else if (f.repeat) C.makeSeries({ startDate: f.date, count: Math.max(1, Math.min(120, parseInt(f.count, 10) || 1)), budgetShift: +f.bmShift, template: tpl }).forEach(function (q) { q.dateConfirmed = base.dateConfirmed; L.planned.push(q); });
         else L.planned.push(Object.assign({ id: C.uid('pl') }, tpl));
       }
     });
     App.closeModal();
   };
   App.actions.skipPlanned = function () { var id = S.modal.id; App.closeModal(); App.commit(T('Статус плана изменён', 'Plan status changed'), function (L) { var p = C.byId(L.planned, id); p.status = p.status === 'skipped' ? null : 'skipped'; }); };
-  App.actions.deletePlanned = function () { var id = S.modal.id; App.confirm(T('Удалить из плана?', 'Delete from plan?'), T('Плановая операция будет удалена.', 'The planned item will be removed.'), function () { App.commit(T('Удалено из плана', 'Removed from plan'), function (L) { L.planned = L.planned.filter(function (p) { return p.id !== id; }); }); }, true, T('Удалить', 'Delete')); };
+  App.actions.deletePlanned = function () { var id = S.modal.id; App.confirm(T('Удалить из плана?', 'Delete from plan?'), T('Плановая операция будет удалена.', 'The planned item will be removed.'), function () { App.commit(T('Удалено из плана', 'Removed from plan'), function (L) { var dp = C.byId(L.planned, id), ds = dp && dp.seriesId && C.byId(L.series || [], dp.seriesId); if (ds) { ds.removed = ds.removed || {}; ds.removed[dp.occYm || C.ymOf(dp.date)] = 1; } L.planned = L.planned.filter(function (p) { return p.id !== id; }); }); }, true, T('Удалить', 'Delete')); };
   App.actions.unconfirmPlanned = function () { var id = S.modal.id; App.closeModal(); App.commit(T('Подтверждение отменено', 'Confirmation undone'), function (L) { return C.unconfirmPlanned(L, id); }); };
 
   /* ---------- reconcile with a bank statement ---------- */
@@ -3341,31 +3549,31 @@ a.row{color:var(--text);text-decoration:none}
   App.scenLabel = function () { var b = (S.L.planned || []).filter(function (p) { return p.scenario === 'reborrow' && p.kind === 'borrow'; })[0]; return T('Сценарий: ', 'Scenario: ') + (b ? b.title.replace(/\s*\((сценарий|scenario)\)\s*$/i, '') + ' · ' + F(b.amount) : T('повторный заём', 're-borrowing')); };
   function scen() { return S.ui.scen.reborrow ? ['reborrow'] : []; }
   App.scen = scen;
+  App.planCard = function (title, body, go, extra) { return card(title, body, go, extra); };
   function card(title, body, go, extra) { return '<div class="card tap" data-a="go" data-s="' + go + '"' + (extra || '') + '><div class="card-h"><span class="t">' + title + '</span><span class="more">' + I('chev', 'sm') + '</span></div>' + body + '</div>'; }
 
   App.screens.planning = function () {
-    var L = S.L, h = '<div class="grid2">';
+    var L = S.L, B = {};
     var up = C.upcoming(L, S.today, 45).filter(function (x) { return x.p.kind === 'payment' || x.p.kind === 'family'; });
-    h += card('Planned Payments · ' + T('Платежи', 'Payments'), '<div class="kpis">' + kpi(T('В ближайшие 45 дней', 'Next 45 days'), F(C.sum(up, function (x) { return x.st.remaining; })), 'plan', up.length + T(' платежей', ' items')) + kpi(T('Просрочено', 'Overdue'), String(up.filter(function (x) { return x.st.status === 'overdue'; }).length), 'neg') + '</div>' + up.slice(0, 3).map(function (x) { return '<div class="split small mt8"><span class="ellipsis">' + esc(App.fd(x.p.date)) + ' · ' + esc(x.p.title) + '</span><span class="num plan">' + esc(F(x.st.remaining)) + '</span></div>'; }).join(''), 'planned');
+    B.planned = card('Planned Payments · ' + T('Платежи', 'Payments'), '<div class="kpis">' + kpi(T('В ближайшие 45 дней', 'Next 45 days'), F(C.sum(up, function (x) { return x.st.remaining; })), 'plan', up.length + T(' платежей', ' items')) + kpi(T('Просрочено', 'Overdue'), String(up.filter(function (x) { return x.st.status === 'overdue'; }).length), 'neg') + '</div>' + up.slice(0, 3).map(function (x) { return '<div class="split small mt8"><span class="ellipsis">' + esc(App.fd(x.p.date)) + ' · ' + esc(x.p.title) + '</span><span class="num plan">' + esc(F(x.st.remaining)) + '</span></div>'; }).join(''), 'planned');
     var bs = C.budgetStatus(L, C.ymOf(S.today), S.today);
-    h += card('Budgets · ' + T('Бюджеты', 'Budgets'), '<div class="split small"><span class="muted">' + T('Личные расходы', 'Personal spending') + '</span><span class="num">' + esc(F(bs.total.spent)) + ' / ' + esc(F(bs.total.limit)) + '</span></div><div class="bar mt8"><i style="width:' + Math.min(100, bs.total.pct * 100) + '%;background:' + (bs.total.exceeded ? 'var(--expense)' : 'var(--income)') + '"></i></div><div class="tiny muted mt8">' + T('Можно тратить в день: ', 'Daily allowance: ') + esc(F(bs.total.daily)) + '</div>', 'budgets');
+    B.budgets = card('Budgets · ' + T('Бюджеты', 'Budgets'), '<div class="split small"><span class="muted">' + T('Личные расходы', 'Personal spending') + '</span><span class="num">' + esc(F(bs.total.spent)) + ' / ' + esc(F(bs.total.limit)) + '</span></div><div class="bar mt8"><i style="width:' + Math.min(100, bs.total.pct * 100) + '%;background:' + (bs.total.exceeded ? 'var(--expense)' : 'var(--income)') + '"></i></div><div class="tiny muted mt8">' + T('Можно тратить в день: ', 'Daily allowance: ') + esc(F(bs.total.daily)) + '</div>', 'budgets');
     var nextInc = L.planned.filter(function (p) { return p.kind === 'income' && !p.confirmed && !p.scenario; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; })[0];
-    var incPlan = C.sum(L.planned.filter(function (p) { return p.kind === 'income' && !p.scenario; }), function (p) { return p.amount; });
-    h += card('Income Plan · ' + T('Доходы', 'Income'), '<div class="kpis">' + kpi(T('Всего ожидается', 'Total expected'), F(incPlan), 'pos') + kpi(T('Следующее', 'Next'), nextInc ? F(nextInc.amount) : '—', 'plan', nextInc ? App.fd(nextInc.date, true) + ' → ' + App.fymShort(nextInc.budgetMonth) : '') + '</div>', 'income');
+    var end12 = C.addMonths(C.ymOf(S.today), 11), incPlan = C.sum(L.planned.filter(function (p) { return p.kind === 'income' && !p.scenario && C.ymOf(p.date) >= C.ymOf(S.today) && C.ymOf(p.date) <= end12; }), function (p) { return p.amount; });
+    B.income = card('Income Plan · ' + T('Доходы', 'Income'), '<div class="kpis">' + kpi(T('Ожидается за 12 мес.', 'Expected in 12 mo'), F(incPlan), 'pos') + kpi(T('Следующее', 'Next'), nextInc ? F(nextInc.amount) : '—', 'plan', nextInc ? App.fd(nextInc.date, true) + ' → ' + App.fymShort(nextInc.budgetMonth) : '') + '</div>', 'income');
     var fc = C.dailyForecast(L, S.today, 62, { scenarios: scen() });
-    h += card('Financial Calendar · ' + T('Календарь', 'Calendar'), fc.firstDeficit ? '<div class="alert danger">' + I('alert') + '<div class="grow">' + T('Возможный дефицит с ', 'Possible deficit from ') + esc(App.fd(fc.firstDeficit, true)) + ' (' + esc(F(fc.min)) + ')</div></div>' : '<div class="alert ok">' + I('check') + '<div class="grow">' + T('Дефицит в ближайшие 2 месяца не прогнозируется', 'No deficit projected in the next 2 months') + '</div></div>', 'calendar');
+    B.calendar = card('Financial Calendar · ' + T('Календарь', 'Calendar'), fc.firstDeficit ? '<div class="alert danger">' + I('alert') + '<div class="grow">' + T('Возможный дефицит с ', 'Possible deficit from ') + esc(App.fd(fc.firstDeficit, true)) + ' (' + esc(F(fc.min)) + ')</div></div>' : '<div class="alert ok">' + I('check') + '<div class="grow">' + T('Дефицит в ближайшие 2 месяца не прогнозируется', 'No deficit projected in the next 2 months') + '</div></div>', 'calendar');
     var goals = (L.goals || []).map(function (g) { return C.goalStatus(L, g, S.today); });
-    h += card('Financial Goals · ' + T('Цели', 'Goals'), '<div style="display:flex;gap:10px;overflow:hidden">' + goals.slice(0, 5).map(function (gs) { return '<div class="center" style="flex:1;min-width:0">' + CH.ring(gs.pct, gs.goal.color || 'var(--savings)', 54, '<span class="tiny b">' + Math.round(gs.pct * 100) + '%</span>') + '<div class="tiny muted ellipsis mt8">#' + (gs.goal.n || '') + ' ' + esc(gs.goal.title) + '</div></div>'; }).join('') + '</div>', 'goals');
+    B.goals = card('Financial Goals · ' + T('Цели', 'Goals'), '<div style="display:flex;gap:10px;overflow:hidden">' + goals.slice(0, 5).map(function (gs) { return '<div class="center" style="flex:1;min-width:0">' + CH.ring(gs.pct, gs.goal.color || 'var(--savings)', 54, '<span class="tiny b">' + Math.round(gs.pct * 100) + '%</span>') + '<div class="tiny muted ellipsis mt8">#' + (gs.goal.n || '') + ' ' + esc(gs.goal.title) + '</div></div>'; }).join('') + '</div>', 'goals');
     var ds = C.debtSummary(L, S.today);
-    h += card('Debt Repayment · ' + T('Долги', 'Debts'), '<div class="kpis">' + kpi(T('Общий долг', 'Total debt'), F(ds.total), 'neg') + kpi(T('Краткосрочный', 'Short-term'), F(ds.short), 'neg') + '</div><div class="bar mt12"><i style="width:' + (ds.initialTotal ? (1 - ds.total / ds.initialTotal) * 100 : 0) + '%;background:var(--income)"></i></div><div class="tiny muted mt8">' + T('Погашено основного долга: ', 'Principal repaid: ') + esc(F(ds.repaidTotal)) + '</div>', 'debts');
+    B.debts = card('Debt Repayment · ' + T('Долги', 'Debts'), '<div class="kpis">' + kpi(T('Общий долг', 'Total debt'), F(ds.total), 'neg') + kpi(T('Краткосрочный', 'Short-term'), F(ds.short), 'neg') + '</div><div class="bar mt12"><i style="width:' + (ds.initialTotal ? (1 - ds.total / ds.initialTotal) * 100 : 0) + '%;background:var(--income)"></i></div><div class="tiny muted mt8">' + T('Погашено основного долга: ', 'Principal repaid: ') + esc(F(ds.repaidTotal)) + '</div>', 'debts');
     var fs = C.familyStatus(L, S.today);
-    h += card('Family Support · ' + T('Родителям', 'Parents'), '<div class="kpis">' + kpi(T('План', 'Plan'), F(fs.planTotal), 'sav') + kpi(T('Отправлено', 'Sent'), F(fs.sentTotal), 'sav') + '</div>', 'family');
+    B.family = card('Family Support · ' + T('Родителям', 'Parents'), '<div class="kpis">' + kpi(T('План', 'Plan'), F(fs.planTotal), 'sav') + kpi(T('Отправлено', 'Sent'), F(fs.sentTotal), 'sav') + '</div>', 'family');
     var first = C.simStartYm(L, S.today), mp1 = C.monthPlan(L, first, { today: S.today, scenarios: scen() }), mp2 = C.monthPlan(L, C.addMonths(first, 1), { today: S.today, scenarios: scen() });
-    h += card(T('Бюджетные периоды', 'Budget periods'), '<div class="kpis">' + kpi(App.fym(first), F(mp1.result), mp1.result < 0 ? 'neg' : 'pos') + kpi(App.fym(C.addMonths(first, 1)), F(mp2.result), mp2.result < 0 ? 'neg' : 'pos') + '</div><div class="tiny muted mt8">' + T('Доход конца месяца финансирует следующий месяц', 'End-of-month income funds the next month') + (S.ui.scen.reborrow ? ' · ' + T('со сценарием займа', 'with loan scenario') : '') + '</div>', 'monthplan');
-    h += card(T('Сценарный симулятор', 'Scenario simulator'), '<div class="small muted">' + T('Негативный / базовый / оптимистичный — без изменения реальных данных', 'Negative / base / optimistic — without touching real data') + '</div>', 'simulator');
-    h += card(T('Могу ли я позволить себе покупку?', 'Can I afford it?'), '<div class="small muted">' + T('Проверка влияния покупки на план', 'Check a purchase against the plan') + '</div>', 'purchase');
-    h += '</div>';
-    return { title: T('Планирование', 'Planning'), html: h };
+    B.monthplan = card(T('Бюджетные периоды', 'Budget periods'), '<div class="kpis">' + kpi(App.fym(first), F(mp1.result), mp1.result < 0 ? 'neg' : 'pos') + kpi(App.fym(C.addMonths(first, 1)), F(mp2.result), mp2.result < 0 ? 'neg' : 'pos') + '</div><div class="tiny muted mt8">' + T('Доход конца месяца финансирует следующий месяц', 'End-of-month income funds the next month') + (S.ui.scen.reborrow ? ' · ' + T('со сценарием займа', 'with loan scenario') : '') + '</div>', 'monthplan');
+    B.simulator = card(T('Сценарный симулятор', 'Scenario simulator'), '<div class="small muted">' + T('Негативный / базовый / оптимистичный — без изменения реальных данных', 'Negative / base / optimistic — without touching real data') + '</div>', 'simulator');
+    B.purchase = card(T('Могу ли я позволить себе покупку?', 'Can I afford it?'), '<div class="small muted">' + T('Проверка влияния покупки на план', 'Check a purchase against the plan') + '</div>', 'purchase');
+    return App.planHub ? App.planHub(B) : { title: T('Планирование', 'Planning'), html: '<div class="grid2">' + Object.keys(B).map(function (k) { return B[k]; }).join('') + '</div>' };
   };
 
   /* ---------- planned payments list ---------- */
@@ -3421,7 +3629,7 @@ a.row{color:var(--text);text-decoration:none}
 
   /* ---------- income plan ---------- */
   App.screens.income = function () {
-    var L = S.L, incs = L.planned.filter(function (p) { return p.kind === 'income' && !p.scenario; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; }), h = '';
+    var L = S.L, incEnd = C.addMonths(C.ymOf(S.today), 11), incs = L.planned.filter(function (p) { return p.kind === 'income' && !p.scenario && C.ymOf(p.date) <= incEnd; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; }), h = '';
     var totP = C.sum(incs, function (p) { return p.amount; }), totA = C.sum(incs, function (p) { return C.plannedState(L, p, S.today).paid; });
     h += '<div class="kpis">' + kpi(T('Ожидаемые поступления', 'Expected income'), F(totP), 'plan') + kpi(T('Фактически подтверждено', 'Confirmed actual'), F(totA), 'pos') + '</div>';
     h += '<div class="dashed-note">' + T('Все будущие поступления — прогноз. Поступление конца месяца финансирует бюджет следующего месяца, но фактически зачисляется на счёт в день получения. Возврат долга тебе учитывается как возврат собственных средств, а не доход.', 'All future income is a forecast. End-of-month income funds the next budget month but is credited on the day received. Loans returned to you count as your own money coming back, not income.') + '</div>';
@@ -3760,7 +3968,7 @@ a.row{color:var(--text);text-decoration:none}
       row('download', '#0A84FF', T('Данные, импорт и резервные копии', 'Data, import & backups'), T('JSON, CSV, снимки', 'JSON, CSV, snapshots'), go('data')) +
       row('edit', '#8E8E93', T('Журнал изменений', 'Change log'), (L.changelog || []).length + T(' записей', ' entries'), go('changelog')) +
       row('settings', '#8E8E93', T('Настройки', 'Settings'), (App.lang() === 'en' ? 'English' : 'Русский') + ' · ' + T({ dark: 'тёмная', light: 'светлая', auto: 'авто' }[L.settings.theme] || 'тёмная', L.settings.theme), go('settings')) +
-      row('info', '#8E8E93', T('О приложении и ограничения', 'About & limitations'), 'Akbar Finance 3.0 · v3.1', go('about')) + '</div>';
+      row('info', '#8E8E93', T('О приложении и ограничения', 'About & limitations'), 'Akbar Finance 3.0 · v3.3', go('about')) + '</div>';
     return { title: T('Ещё', 'More'), html: h };
   };
 
@@ -4033,7 +4241,7 @@ a.row{color:var(--text);text-decoration:none}
   /* ---------- about & limitations ---------- */
   App.screens.about = function () {
     var li = function (a) { return '<li>' + a + '</li>'; };
-    var h = '<div class="card"><div class="b">Akbar Finance 3.0 · v3.1</div><div class="small muted mt8">' + T('Личное приложение учёта финансов. Интерфейс вдохновлён структурой Wallet by BudgetBakers, собственная реализация без чужих логотипов и ресурсов.', 'Personal finance ledger. Interface inspired by the Wallet by BudgetBakers layout; own implementation, no third-party logos or assets.') + '</div></div>';
+    var h = '<div class="card"><div class="b">Akbar Finance 3.0 · v3.3</div><div class="small muted mt8">' + T('Личное приложение учёта финансов. Интерфейс вдохновлён структурой Wallet by BudgetBakers, собственная реализация без чужих логотипов и ресурсов.', 'Personal finance ledger. Interface inspired by the Wallet by BudgetBakers layout; own implementation, no third-party logos or assets.') + '</div></div>';
     h += '<div class="card"><div class="card-h"><span class="t">' + T('Честные ограничения', 'Honest limitations') + '</span></div><ul class="small ul">' +
       li(T('Нет облачной синхронизации и аккаунтов. Данные — только в этом браузере на этом устройстве.', 'No cloud sync or accounts. Data stays in this browser on this device.')) +
       li(T('Перенос между iPhone и Windows — вручную через экспорт/импорт JSON.', 'Moving between iPhone and Windows is manual via JSON export/import.')) +
@@ -4466,6 +4674,279 @@ a.row{color:var(--text);text-decoration:none}
   };
   App.actions.sumKind = function (el) { S.ui.sumKind = el.dataset.v; App.render(); };
   App.actions.sumShift = function (el) { S.ui.sumYm = C.addMonths(S.ui.sumYm, +el.dataset.d); App.render(); };
+})();
+
+</script>
+<script>
+/* 3.3 — «Доходы и расходы» (series = single source of the plan), series editor, FAB chooser, Planning blocks */
+(function () {
+  'use strict';
+  var App = window.App, C = App.C, I = App.I, CH = App.CH, S = App.S, T = App.T, F = App.F, esc = App.esc;
+  var fld = App.fld, inp = App.inp, sel = App.sel, group = App.group;
+  function own(a) { return !C.isLiab(a); }
+  function errBox(m) { return m.err ? '<div class="alert danger">' + I('alert') + '<div class="grow">' + esc(m.err) + '</div></div>' : ''; }
+  function curYm() { return C.ymOf(S.today); }
+  function ser(id) { return C.byId(S.L.series || [], id); }
+  function kindName(k) { return k === 'income' ? T('Доход', 'Income') : k === 'family' ? T('Родителям', 'Parents') : T('Платёж', 'Payment'); }
+  function isIncome(s) { return s.kind === 'income'; }
+  App.serFreqLabel = function (s) {
+    if (s.freq === 'once') return T('Разово', 'One-off') + ' · ' + App.fymTiny(s.start);
+    if (!s.end) return T('Ежемесячно', 'Monthly') + ' · ' + T('с ', 'from ') + App.fymTiny(s.start) + ' · ' + T('бессрочно', 'open-ended');
+    var n = C.seriesMonths(s, S.today).length;
+    return T('Ежемесячно', 'Monthly') + ' · ' + App.fymTiny(s.start) + ' – ' + App.fymTiny(s.end) + ' · ' + n + T(' мес.', ' mo');
+  };
+  function amtHtml(s, ym) {
+    if (C.seriesAmountUnset(s)) return '<span class="muted small">' + T('сумма не задана', 'amount not set') + '</span>';
+    var v = C.seriesAmountFor(s, ym || (s.start > curYm() ? s.start : curYm()));
+    return '<span class="num ' + (isIncome(s) ? 'pos' : '') + '">' + (isIncome(s) ? '+' : '−') + esc(F(v)) + '</span>';
+  }
+  function serRow(s) {
+    var acc = s.accountId && C.byId(S.L.accounts, s.accountId);
+    var sub = App.serFreqLabel(s) + (s.kind !== 'income' ? ' · ' + (acc ? esc(acc.name) : kindName(s.kind)) : '');
+    var ov = Object.keys(s.overrides || {}).length;
+    return '<button class="row tap ser-row" data-a="go" data-s="seriesEdit" data-id="' + s.id + '"><div class="main-t"><div class="t1">' + esc(s.title || kindName(s.kind)) + '</div><div class="t2">' + sub + (ov ? ' · ' + ov + T(' изм.', ' edits') : '') + '</div></div><div class="amt">' + amtHtml(s) + '</div></button>';
+  }
+
+  /* ---------- list screen ---------- */
+  App.screens.series = function () {
+    var L = S.L, tab = S.ui.serTab || 'income', list = (L.series || []).filter(function (s) { return tab === 'income' ? isIncome(s) : !isIncome(s); });
+    var ym = C.simStartYm(L, S.today), cym = curYm(), done = function (s) { return s.freq === 'once' ? s.start < cym : (s.end && s.end < cym); };
+    var h = '<div class="seg">' + [['income', T('Доходы', 'Income')], ['expense', T('Расходы', 'Expenses')]].map(function (x) { return '<button class="' + (tab === x[0] ? 'on' : '') + '" data-a="serTab" data-v="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div>';
+    var tot = 0; list.forEach(function (s) { if (C.seriesMonths(s, S.today).indexOf(ym) >= 0) tot += C.seriesAmountFor(s, ym); });
+    h += '<div class="card"><div class="split"><span class="muted small">' + (tab === 'income' ? T('Доходы в ', 'Income in ') : T('Расходы в ', 'Expenses in ')) + esc(App.fym(ym)) + '</span><span class="num b">' + esc(F(tot)) + '</span></div><div class="tiny muted mt8">' + T('Один список для всего плана: Плановые платежи, бюджетные периоды, симулятор, главная и Debt Freedom берут цифры отсюда.', 'One list for the whole plan: planned payments, budget periods, simulator, dashboard and Debt Freedom read from here.') + '</div></div>';
+    var sec = function (title, items, freq) {
+      return '<div class="sec-h"><span class="t small">' + title + '</span><button class="link" data-a="modal" data-m="serNew" data-kind="' + (tab === 'income' ? 'income' : 'payment') + '" data-freq="' + freq + '">' + I('plus', 'sm') + T('Добавить', 'Add') + '</button></div>' +
+        (items.length ? '<div class="list">' + items.map(serRow).join('') + '</div>' : '<div class="card empty small">' + T('Пока пусто', 'Nothing yet') + '</div>');
+    };
+    var act = list.filter(function (s) { return !done(s); }), old = list.filter(done);
+    h += sec(T('Ежемесячные', 'Monthly'), act.filter(function (s) { return s.freq !== 'once'; }), 'open');
+    h += sec(tab === 'income' ? T('Разовые (бонус, непредвиденный доход)', 'One-off (bonus, unexpected income)') : T('Разовые и непредвиденные', 'One-off & unexpected'), act.filter(function (s) { return s.freq === 'once'; }), 'once');
+    if (old.length) h += '<div class="sec-h"><span class="t small muted">' + T('Завершённые', 'Finished') + '</span></div><div class="list">' + old.map(serRow).join('') + '</div>';
+    var loose = L.planned.filter(function (p) { return !p.seriesId && !p.scenario; }).length;
+    if (loose) h += '<div class="tiny muted mt8">' + loose + T(' плановых операций вне серий (займы) — см. «Плановые платежи».', ' planned items outside series (loans) — see Planned payments.') + '</div>';
+    return { title: T('Доходы и расходы', 'Income & expenses'), html: h, right: '<button class="iconbtn" data-a="modal" data-m="serNew" data-kind="' + (tab === 'income' ? 'income' : 'payment') + '" aria-label="add">' + I('plus') + '</button>' };
+  };
+  App.actions.serTab = function (el) { S.ui.serTab = el.dataset.v; App.render(); };
+
+  /* ---------- series editor screen ---------- */
+  App.screens.seriesEdit = function (p) {
+    var L = S.L, s = ser(p.id);
+    if (!s) return { title: T('Серия', 'Series'), html: '<div class="card empty">' + T('Серия удалена', 'Series deleted') + '</div>' };
+    var occ = {}; L.planned.forEach(function (q) { if (q.seriesId === s.id) occ[q.occYm || C.ymOf(q.date)] = q; });
+    var h = '<div class="card"><div class="split"><div><div class="b">' + esc(s.title || kindName(s.kind)) + '</div><div class="tiny muted">' + kindName(s.kind) + ' · ' + esc(App.serFreqLabel(s)) + '</div></div><div class="right">' + amtHtml(s) + '</div></div>';
+    h += '<div class="tiny muted mt8">' + T('Базовая сумма: ', 'Base amount: ') + (s.steps || []).map(function (x) { return esc(App.fymTiny(x.from)) + ' → ' + (x.amount ? esc(F(x.amount)) : T('не задана', 'not set')); }).join(' · ') + '</div>';
+    h += '<div class="btns"><button class="btn sec" data-a="modal" data-m="serNew" data-id="' + s.id + '">' + I('edit') + T('Параметры', 'Settings') + '</button>' + (s.freq !== 'once' && s.end ? '<button class="btn sec" data-a="serExtend" data-id="' + s.id + '">' + T('+12 мес.', '+12 mo') + '</button>' : '') + '</div></div>';
+    h += '<div class="sec-h"><span class="t small">' + T('Месяцы', 'Months') + '</span><span class="tiny muted">' + T('нажми месяц, чтобы изменить', 'tap a month to edit') + '</span></div>';
+    var months = C.seriesMonths(s, S.today), ym0 = C.addMonths(curYm(), -2), ym1 = C.addMonths(curYm(), 12);
+    var shown = months.filter(function (ym) { return (ym >= ym0 && ym <= ym1) || (ym < ym0 && occ[ym] && C.plannedState(L, occ[ym], S.today).open); });
+    if (S.ui.serPast) shown = months;
+    var removed = Object.keys(s.removed || {}).filter(function (k) { return k >= s.start && k <= C.seriesEnd(s, S.today); });
+    h += '<div class="list" data-ser-months="1">' + shown.map(function (ym) {
+      var q = occ[ym], st = q ? C.plannedState(L, q, S.today) : null, ovr = C.seriesIsOverridden(s, ym);
+      var tags = (ovr ? '<span class="tag info">' + T('изменено', 'edited') + '</span> ' : '') + (st && !st.open && st.status !== 'planned' ? App.pTag(st.status) : '');
+      return '<button class="row tap" data-a="modal" data-m="serMonth" data-id="' + s.id + '" data-ym="' + ym + '"><div class="main-t"><div class="t1">' + esc(App.fym(ym)) + '</div><div class="t2">' + (q ? esc(App.fd(q.date, true)) + (q.budgetMonth && q.budgetMonth !== ym ? ' → ' + esc(App.fymShort(q.budgetMonth)) : '') : '') + ' ' + tags + '</div></div><div class="amt"><div class="num' + (ovr ? ' b' : '') + '">' + (C.seriesAmountFor(s, ym) ? esc(F(C.seriesAmountFor(s, ym))) : '<span class="muted small">' + T('сумма не задана', 'amount not set') + '</span>') + '</div></div></button>';
+    }).join('') + '</div>';
+    if (shown.length < months.length || S.ui.serPast) h += '<div class="btns"><button class="btn sec" data-a="serPast">' + T('Показать все месяцы', 'Show all months') + ' (' + months.length + ')' + '</button></div>';
+    if (removed.length) h += '<div class="tiny muted mt8">' + T('Пропущены: ', 'Skipped: ') + removed.map(function (k) { return '<button class="link" data-a="serUnskip" data-id="' + s.id + '" data-ym="' + k + '">' + esc(App.fymTiny(k)) + '</button>'; }).join(', ') + '</div>';
+    if (!s.end && s.freq !== 'once') h += '<div class="tiny muted mt8">' + T('Бессрочная серия продлевается сама: в плане всегда ', 'Open-ended: the plan always holds ') + C.SERIES_HORIZON + T(' мес. от текущего месяца.', ' months from the current month.') + '</div>';
+    h += '<div class="btns"><button class="btn danger" data-a="serDelete" data-id="' + s.id + '">' + I('trash') + T('Удалить серию', 'Delete series') + '</button></div>';
+    return { title: s.title || kindName(s.kind), html: h };
+  };
+  App.actions.serPast = function () { S.ui.serPast = !S.ui.serPast; App.render(); };
+  App.actions.serExtend = function (el) { var id = el.dataset.id; App.commit(T('Серия продлена', 'Series extended'), function (L) { var s = C.byId(L.series, id); s.end = C.addMonths(s.end, 12); }); };
+  App.actions.serUnskip = function (el) { var id = el.dataset.id, ym = el.dataset.ym; App.commit(T('Месяц возвращён', 'Month restored'), function (L) { var s = C.byId(L.series, id); delete s.removed[ym]; }); };
+  App.actions.serDelete = function (el) {
+    var id = el.dataset.id;
+    App.confirm(T('Удалить серию?', 'Delete series?'), T('Будущие плановые месяцы удалятся. Уже подтверждённые и оплаченные операции останутся.', 'Future planned months are removed. Confirmed and paid items stay.'), function () {
+      App.commit(T('Серия удалена', 'Series deleted'), function (L) {
+        var locked = {}; L.transactions.forEach(function (t) { if (t.status !== 'void' && t.plannedId) locked[t.plannedId] = 1; });
+        L.planned = L.planned.filter(function (p) { if (p.seriesId !== id) return true; if (locked[p.id] || p.confirmed) { p.seriesId = null; return true; } return false; });
+        L.series = L.series.filter(function (s) { return s.id !== id; });
+      });
+      App.back ? App.back() : null;
+    }, true, T('Удалить', 'Delete'));
+  };
+
+  /* ---------- month edit: только этот / этот и все следующие / сбросить ---------- */
+  App.modals.serMonth = function (m) {
+    var s = ser(m.id), f = m.f; if (!s) return { title: '', html: '' };
+    var q = S.L.planned.filter(function (p) { return p.seriesId === s.id && (p.occYm || C.ymOf(p.date)) === m.ym; })[0];
+    var st = q ? C.plannedState(S.L, q, S.today) : null;
+    if (!m.inited) { m.inited = true; f.amount = App.amtStr(C.seriesAmountFor(s, m.ym)); }
+    var base = C.seriesBaseAmount(s, m.ym), ovr = C.seriesIsOverridden(s, m.ym);
+    var h = '<div class="form">' + group('', fld(T('Сумма', 'Amount') + ' (AED)', inp('amount', f.amount, { num: true, ph: T('не задана', 'not set') }))) + '</div>';
+    h += '<div class="card small">' + App.kv(T('Базовая сумма', 'Base amount'), base ? F(base) : T('не задана', 'not set')) + (ovr ? '<div class="tiny info mt8">' + T('Этот месяц изменён отдельно', 'This month is edited separately') + '</div>' : '') + (st && !st.open && st.status !== 'planned' ? '<div class="tiny unconf mt8">' + T('Месяц уже подтверждён/оплачен — сумма этой операции не изменится.', 'Month already confirmed/paid — that item keeps its amount.') + '</div>' : '') + '</div>';
+    h += '<div class="btns col"><button class="btn" data-a="serSetOnly">' + T('Изменить только этот месяц', 'Change only this month') + '</button><button class="btn sec" data-a="serSetFollowing">' + T('Этот и все следующие', 'This and all following') + '</button>' + (ovr ? '<button class="btn sec" data-a="serReset">' + T('Сбросить к базовой', 'Reset to base') + '</button>' : '') + '</div>';
+    h += '<div class="btns">' + (q ? '<button class="btn sec" data-a="modal" data-m="editPlanned" data-id="' + q.id + '">' + (q.kind === 'income' ? T('Подтвердить / открыть', 'Confirm / open') : T('Оплатить / открыть', 'Pay / open')) + '</button>' : '') + '<button class="btn sec" data-a="serSkip">' + T('Пропустить месяц', 'Skip month') + '</button></div>';
+    h += errBox(m);
+    return { title: App.fym(m.ym) + ' · ' + esc(s.title), html: h };
+  };
+  function monthAmt(m) { var a = String(m.f.amount || '').trim() === '' ? 0 : App.toMinor(m.f.amount); if (a == null || a < 0) { m.err = T('Введите сумму', 'Enter an amount'); App.renderModal(); return null; } return a; }
+  App.actions.serSetOnly = function () { var m = S.modal, a = monthAmt(m); if (a == null) return; App.closeModal(); App.commit(T('Изменён один месяц', 'One month changed'), function (L) { C.setSeriesAmount(C.byId(L.series, m.id), m.ym, a, 'only'); }); };
+  App.actions.serSetFollowing = function () {
+    var m = S.modal, a = monthAmt(m); if (a == null) return;
+    var s = ser(m.id), later = C.seriesLaterOverrides(s, m.ym);
+    var apply = function (clear) { App.commit(T('Изменено с ', 'Changed from ') + App.fymTiny(m.ym), function (L) { C.setSeriesAmount(C.byId(L.series, m.id), m.ym, a, 'following', clear); }); };
+    if (!later.length) { App.closeModal(); apply(false); return; }
+    App.openModal('serLater', { id: m.id, ym: m.ym, later: later, apply: apply });
+  };
+  App.modals.serLater = function (m) {
+    return { title: T('Отдельные изменения дальше', 'Later per-month edits'), html: '<div class="card">' + T('После ', 'After ') + esc(App.fym(m.ym)) + T(' есть месяцы, изменённые отдельно: ', ' some months were edited separately: ') + m.later.map(function (k) { return esc(App.fymTiny(k)); }).join(', ') + '.<div class="tiny muted mt8">' + T('Сбросить их к новой базовой сумме или оставить как есть?', 'Reset them to the new base or keep them?') + '</div></div>' +
+      '<div class="btns col"><button class="btn" data-a="serLaterKeep">' + T('Оставить отдельные изменения', 'Keep them') + '</button><button class="btn danger" data-a="serLaterClear">' + T('Сбросить их', 'Reset them') + ' (' + m.later.length + ')</button></div>' };
+  };
+  App.actions.serLaterKeep = function () { var fn = S.modal.apply; App.closeModal(); fn(false); };
+  App.actions.serLaterClear = function () { var fn = S.modal.apply; App.closeModal(); fn(true); };
+  App.actions.serReset = function () { var m = S.modal; App.closeModal(); App.commit(T('Сброшено к базовой', 'Reset to base'), function (L) { C.resetSeriesMonth(C.byId(L.series, m.id), m.ym); }); };
+  App.actions.serSkip = function () { var m = S.modal; App.closeModal(); App.commit(T('Месяц пропущен', 'Month skipped'), function (L) { var s = C.byId(L.series, m.id); s.removed = s.removed || {}; s.removed[m.ym] = 1; }); };
+
+  /* ---------- create / edit series ---------- */
+  App.modals.serNew = function (m) {
+    var L = S.L, s = m.id ? ser(m.id) : null, f = m.f;
+    if (!m.inited) {
+      m.inited = true;
+      if (s) Object.assign(f, { kind: s.kind, title: s.title, amount: App.amtStr((s.steps || [])[0] ? s.steps[0].amount : 0), freq: s.freq === 'once' ? 'once' : (s.end ? 'until' : 'open'), start: s.start, end: s.end || C.addMonths(s.start, 11), count: '', day: String(s.day || 1), shift: String(s.budgetShift || 0), accountId: s.accountId || '', from: s.fromAccountId || '', to: s.toAccountId || '', category: s.categoryId || 'misc', note: s.note || '' });
+      else {
+        var k = m.kind || 'payment', fr = m.freq || 'open', acc0 = (L.accounts.filter(function (a) { return own(a) && !a.role; })[0] || {}).id || '';
+        Object.assign(f, { kind: k, title: '', amount: '', freq: fr, start: curYm(), end: C.addMonths(curYm(), 11), count: '6', day: fr === 'once' ? '15' : (k === 'income' ? '31' : '1'), shift: k === 'income' && fr !== 'once' ? '1' : '0', accountId: m.acc || '', from: acc0, to: acc0, category: 'misc', note: '' });
+      }
+    }
+    var x = '';
+    if (!s) x += fld(T('Тип', 'Type'), sel('kind', App.opts([['income', T('Доход', 'Income')], ['payment', T('Расход / платёж', 'Expense / payment')], ['family', T('Родителям', 'Parents')]], f.kind), { re: 1 }));
+    x += fld(T('Название', 'Title'), inp('title', f.title, { ph: f.kind === 'income' ? T('например, Зарплата', 'e.g. Salary') : T('например, Аренда', 'e.g. Rent') }));
+    var multi = s && (s.steps || []).length > 1;
+    if (!multi) x += fld(T('Сумма', 'Amount') + ' (AED)', inp('amount', f.amount, { num: true, ph: T('можно оставить пустой', 'may be empty') }));
+    x += fld(T('Частота', 'Frequency'), sel('freq', App.opts([['open', T('Ежемесячно, бессрочно', 'Monthly, open-ended')], ['until', T('Ежемесячно, до месяца', 'Monthly, until month')], ['n', T('На N месяцев', 'For N months')], ['once', T('Разово', 'One-off')]], f.freq), { re: 1 }));
+    x += fld(f.freq === 'once' ? T('Месяц', 'Month') : T('С месяца', 'From month'), inp('start', f.start, { type: 'month' }));
+    if (f.freq === 'until') x += fld(T('По месяц', 'Until month'), inp('end', f.end, { type: 'month' }));
+    if (f.freq === 'n') x += fld(T('Сколько месяцев', 'How many months'), inp('count', f.count, { num: true }));
+    x += fld(T('День месяца', 'Day of month'), inp('day', f.day, { num: true, ph: '31 = ' + T('последний', 'last') }));
+    x += fld(T('Бюджетный месяц', 'Budget month'), sel('shift', App.opts([['0', T('тот же месяц', 'same month')], ['1', T('следующий (доход конца месяца)', 'next (end-of-month income)')]], f.shift)));
+    if (f.kind === 'payment') {
+      x += fld(T('Кредит / долг', 'Credit / loan'), sel('accountId', App.accOpts(C.isLiab, f.accountId, T('— обычный расход —', '— regular expense —')), { re: 1 }));
+      if (!f.accountId) x += fld(T('Категория', 'Category'), sel('category', App.catOpts('expense', f.category)));
+      x += fld(T('Со счёта', 'From account'), sel('from', App.accOpts(own, f.from)));
+    }
+    if (f.kind === 'family') x += fld(T('Со счёта', 'From account'), sel('from', App.accOpts(own, f.from)));
+    if (f.kind === 'income') x += fld(T('На счёт', 'To account'), sel('to', App.accOpts(own, f.to)));
+    x += fld(T('Комментарий', 'Note'), inp('note', f.note));
+    var h = '<div class="form">' + group('', x, multi ? T('Сумма меняется по месяцам — открой месяц в списке.', 'The amount changes by month — open a month in the list.') : (s ? '' : T('Плановые месяцы появятся в «Плановых платежах», бюджетных периодах и симуляторе. Фактические балансы не меняются, пока не подтвердишь.', 'Planned months appear in planned payments, budget periods and the simulator. Actual balances do not change until you confirm.'))) + '</div>' + errBox(m);
+    return { title: s ? T('Параметры серии', 'Series settings') : (f.freq === 'once' ? T('Новая разовая запись', 'New one-off entry') : T('Новая серия', 'New series')), html: h, done: 'serSave', doneLabel: T('Сохранить', 'Save') };
+  };
+  App.actions.serSave = function () {
+    var m = S.modal, f = m.f, amt = String(f.amount || '').trim() === '' ? 0 : App.toMinor(f.amount);
+    if (amt == null || amt < 0) { m.err = T('Неверная сумма', 'Invalid amount'); App.renderModal(); return; }
+    if (!/^\d{4}-\d{2}$/.test(f.start || '')) { m.err = T('Укажите месяц', 'Set a month'); App.renderModal(); return; }
+    var end = f.freq === 'once' ? f.start : f.freq === 'until' ? f.end : f.freq === 'n' ? C.addMonths(f.start, Math.max(1, Math.min(120, parseInt(f.count, 10) || 1)) - 1) : null;
+    if (end && end < f.start) { m.err = T('Конец раньше начала', 'End is before start'); App.renderModal(); return; }
+    var day = Math.max(1, Math.min(31, parseInt(f.day, 10) || 1));
+    var title = f.title || (f.kind === 'income' ? T('Доход', 'Income') : f.kind === 'family' ? T('Перевод родителям', 'Transfer to parents') : T('Расход', 'Expense'));
+    var fields = { title: title, freq: f.freq === 'once' ? 'once' : 'monthly', start: f.start, end: end, day: day, budgetShift: +f.shift || 0, accountId: f.kind === 'payment' ? (f.accountId || null) : null, fromAccountId: f.kind !== 'income' ? (f.from || null) : null, toAccountId: f.kind === 'income' ? (f.to || null) : null, categoryId: f.kind === 'payment' && !f.accountId ? f.category : null, note: f.note || '' };
+    var id = m.id, newId = null;
+    App.commit(id ? T('Серия изменена', 'Series updated') : T('Добавлено в план', 'Added to plan'), function (L) {
+      L.series = L.series || [];
+      if (id) {
+        var s = C.byId(L.series, id), dayChanged = s.day !== day || (s.budgetShift || 0) !== fields.budgetShift;
+        Object.assign(s, fields);
+        if ((s.steps || []).length <= 1) s.steps = [{ from: f.start, amount: amt }];
+        if (dayChanged) L.planned.forEach(function (p) { if (p.seriesId === id && !p.confirmed && !C.plannedState(L, p).txs.length) { var ym = p.occYm || C.ymOf(p.date); p.date = ym + '-' + ('0' + Math.min(day, C.daysInMonth(ym))).slice(-2); p.budgetMonth = C.addMonths(ym, fields.budgetShift); } });
+      } else {
+        var ns = C.newSeries(Object.assign({ kind: f.kind, amount: amt }, fields)); ns.end = end; newId = ns.id; L.series.push(ns);
+      }
+    });
+    App.closeModal();
+    void newId;
+  };
+
+  /* ---------- FAB: type chooser ---------- */
+  App.modals.fabChooser = function () {
+    var b = function (icon, title, sub, attrs) { return '<button class="row tap" ' + attrs + '>' + '<span class="ic">' + I(icon) + '</span><div class="main-t"><div class="t1">' + title + '</div><div class="t2">' + sub + '</div></div></button>'; };
+    return { title: T('Добавить', 'Add'), html: '<div class="list">' +
+      b('receipt', T('Операция (факт)', 'Record (actual)'), T('расход, доход, перевод — меняет баланс', 'expense, income, transfer — changes balance'), 'data-a="modal" data-m="record" data-fab="1"') +
+      b('arrowIn', T('Ежемесячный доход', 'Monthly income'), T('зарплата и другие постоянные поступления', 'salary and other recurring income'), 'data-a="modal" data-m="serNew" data-kind="income" data-freq="open"') +
+      b('arrowOut', T('Ежемесячный расход', 'Monthly expense'), T('аренда, кредит, родителям…', 'rent, loan, parents…'), 'data-a="modal" data-m="serNew" data-kind="payment" data-freq="open"') +
+      b('gift', T('Разовый доход', 'One-off income'), T('бонус, непредвиденный доход', 'bonus, unexpected income'), 'data-a="modal" data-m="serNew" data-kind="income" data-freq="once"') +
+      b('alert', T('Непредвиденный расход', 'Unexpected expense'), T('разовый расход в плане', 'one-off planned expense'), 'data-a="modal" data-m="serNew" data-kind="payment" data-freq="once"') +
+      '</div>' };
+  };
+
+  /* ---------- Planning blocks ---------- */
+  var CORE_NAMES = function () { return { series: T('Доходы и расходы', 'Income & expenses'), planned: 'Planned Payments', budgets: 'Budgets', income: 'Income Plan', calendar: T('Календарь', 'Calendar'), goals: T('Цели', 'Goals'), debts: 'Debt Repayment', family: 'Family Support', monthplan: T('Бюджетные периоды', 'Budget periods'), simulator: T('Симулятор', 'Simulator'), purchase: T('Проверка покупки', 'Purchase check') }; };
+  var TPL = function () { return { goal: T('Накопления на цель', 'Saving for a goal'), income2: T('Второй доход', 'Second income'), debt: T('Отдельный долг', 'Single debt'), custom: T('Свой блок', 'Custom block') }; };
+  function blockName(b) { return b.title || CORE_NAMES()[b.type] || TPL()[b.type] || b.type; }
+  function seriesCard(L) {
+    var ym = C.simStartYm(L, S.today), inc = 0, out = 0, n = (L.series || []).length;
+    (L.series || []).forEach(function (s) { if (C.seriesMonths(s, S.today).indexOf(ym) < 0) return; if (isIncome(s)) inc += C.seriesAmountFor(s, ym); else out += C.seriesAmountFor(s, ym); });
+    return App.planCard(T('Доходы и расходы', 'Income & expenses'), '<div class="kpis">' + App.kpi(T('Доходы в ', 'Income in ') + App.fymShort(ym), F(inc), 'pos') + App.kpi(T('Расходы', 'Expenses'), F(out), 'neg') + '</div><div class="tiny muted mt8">' + n + T(' серий · единый список для всего плана', ' series · one list for the whole plan') + '</div>', 'series');
+  }
+  function customCard(L, b) {
+    var ym = curYm();
+    if (b.type === 'goal') {
+      var g = C.byId(L.goals || [], b.ref); if (!g) return missing(b);
+      var gs = C.goalStatus(L, g, S.today);
+      return App.planCard(esc(blockName(b)), '<div style="display:flex;gap:12px;align-items:center">' + CH.ring(gs.pct, g.color || 'var(--savings)', 54, '<span class="tiny b">' + Math.round(gs.pct * 100) + '%</span>') + '<div class="small"><div class="b">' + esc(g.title) + '</div><div class="muted">' + esc(F(gs.current || 0, g.currency)) + ' / ' + esc(F(g.target, g.currency)) + '</div></div></div>', 'goals');
+    }
+    if (b.type === 'income2') {
+      var s = ser(b.ref); if (!s) return missing(b);
+      var ms = C.seriesMonths(s, S.today).filter(function (x) { return x >= ym; }).slice(0, 3);
+      return App.planCard(esc(blockName(b)), '<div class="tiny muted">' + esc(s.title) + ' · ' + esc(App.serFreqLabel(s)) + '</div>' + ms.map(function (x) { return '<div class="split small mt8"><span>' + esc(App.fym(x)) + '</span><span class="num pos">' + (C.seriesAmountFor(s, x) ? esc(F(C.seriesAmountFor(s, x))) : T('сумма не задана', 'amount not set')) + '</span></div>'; }).join(''), 'seriesEdit', ' data-id="' + s.id + '"');
+    }
+    if (b.type === 'debt') {
+      var a = C.byId(L.accounts, b.ref); if (!a) return missing(b);
+      var bal = C.balances ? (C.balances(L, S.today)[a.id] || 0) : 0;
+      var nxt = L.planned.filter(function (p) { return p.accountId === a.id && p.kind === 'payment' && C.plannedState(L, p, S.today).open; }).sort(function (x, y) { return x.date < y.date ? -1 : 1; })[0];
+      return App.planCard(esc(blockName(b)), '<div class="kpis">' + App.kpi(T('Остаток', 'Balance'), F(Math.abs(bal), a.currency), 'neg') + App.kpi(T('Следующий платёж', 'Next payment'), nxt ? F(nxt.amount) : '—', 'plan', nxt ? App.fd(nxt.date, true) : '') + '</div>', 'account', ' data-id="' + a.id + '"');
+    }
+    var refs = (b.refs || []).map(ser).filter(Boolean), tot = 0;
+    refs.forEach(function (s) { if (C.seriesMonths(s, S.today).indexOf(ym) >= 0) tot += (isIncome(s) ? 1 : -1) * C.seriesAmountFor(s, ym); });
+    return App.planCard(esc(blockName(b)), '<div class="split small"><span class="muted">' + esc(App.fym(ym)) + '</span><span class="num ' + (tot < 0 ? 'neg' : 'pos') + '">' + esc(F(tot, 'AED', { plus: true })) + '</span></div>' + refs.slice(0, 4).map(function (s) { return '<div class="split tiny mt8"><span class="ellipsis">' + esc(s.title) + '</span>' + amtHtml(s) + '</div>'; }).join('') + (refs.length ? '' : '<div class="tiny muted mt8">' + T('Нет выбранных серий', 'No series selected') + '</div>'), 'series');
+  }
+  function missing(b) { return '<div class="card"><div class="card-h"><span class="t">' + esc(blockName(b)) + '</span></div><div class="tiny muted">' + T('Источник удалён — удали или замени блок.', 'Source deleted — remove or replace the block.') + '</div></div>'; }
+  App.planHub = function (B) {
+    var L = S.L, blocks = C.ensureBlocks(L);
+    B.series = seriesCard(L);
+    if (S.ui.planEdit) {
+      var h = '<div class="tiny muted mb8">' + T('Стрелками меняй порядок, «Скрыть» убирает блок с экрана. Блоки только показывают данные из общего плана.', 'Arrows reorder, “Hide” removes a block from the screen. Blocks only display data from the shared plan.') + '</div><div class="list" data-blocks="1">';
+      h += blocks.map(function (b, i) {
+        return '<div class="row blk' + (b.hidden ? ' off' : '') + '" data-blk="' + b.id + '"><div class="main-t"><div class="t1">' + esc(blockName(b)) + '</div><div class="t2">' + (b.hidden ? T('скрыт', 'hidden') : (C.CORE_BLOCKS.indexOf(b.type) >= 0 ? T('стандартный', 'built-in') : TPL()[b.type])) + '</div></div>' +
+          '<button class="iconbtn sm" data-a="blkMove" data-id="' + b.id + '" data-d="-1" aria-label="up"' + (i === 0 ? ' disabled' : '') + '>' + I('up', 'sm') + '</button><button class="iconbtn sm" data-a="blkMove" data-id="' + b.id + '" data-d="1" aria-label="down"' + (i === blocks.length - 1 ? ' disabled' : '') + '>' + I('down', 'sm') + '</button>' +
+          '<button class="chip' + (b.hidden ? '' : ' on') + '" data-a="blkHide" data-id="' + b.id + '">' + (b.hidden ? T('Показать', 'Show') : T('Скрыть', 'Hide')) + '</button>' +
+          (C.CORE_BLOCKS.indexOf(b.type) < 0 ? '<button class="iconbtn sm" data-a="blkDel" data-id="' + b.id + '" aria-label="delete">' + I('trash', 'sm') + '</button>' : '') + '</div>';
+      }).join('') + '</div><div class="btns"><button class="btn" data-a="modal" data-m="blockAdd">' + I('plus') + T('Добавить блок', 'Add block') + '</button></div>';
+      return { title: T('Планирование', 'Planning'), html: h, right: '<button class="link b" data-a="planEdit">' + T('Готово', 'Done') + '</button>' };
+    }
+    var html = '<div class="grid2">' + blocks.filter(function (b) { return !b.hidden; }).map(function (b) { return C.CORE_BLOCKS.indexOf(b.type) >= 0 ? (B[b.type] || '') : customCard(L, b); }).join('') + '</div>';
+    var hid = blocks.filter(function (b) { return b.hidden; }).length;
+    if (hid) html += '<div class="tiny muted mt8">' + T('Скрыто блоков: ', 'Hidden blocks: ') + hid + '</div>';
+    return { title: T('Планирование', 'Planning'), html: html, right: '<button class="link" data-a="planEdit">' + T('Изменить', 'Edit') + '</button>' };
+  };
+  App.actions.planEdit = function () { S.ui.planEdit = !S.ui.planEdit; App.render(); };
+  App.actions.blkMove = function (el) { var id = el.dataset.id, d = +el.dataset.d; App.commit(T('Порядок изменён', 'Order changed'), function (L) { if (!C.moveBlock(L, id, d)) return { ok: false }; }, { silent: true }); };
+  App.actions.blkHide = function (el) {
+    var id = el.dataset.id, b = C.ensureBlocks(S.L).filter(function (x) { return x.id === id; })[0]; if (!b) return;
+    var go = function () { App.commit(b.hidden ? T('Блок показан', 'Block shown') : T('Блок скрыт', 'Block hidden'), function (L) { C.setBlockHidden(L, id, !b.hidden); }, { silent: true }); };
+    if (!b.hidden && C.GUARDED_BLOCKS.indexOf(b.type) >= 0) App.confirm(T('Скрыть «', 'Hide “') + blockName(b) + T('»?', '”?'), T('Данные не удаляются — блок просто пропадёт с экрана «Планирование». Вернуть можно здесь же.', 'No data is deleted — the block just disappears from Planning. You can show it again here.'), go, false, T('Скрыть', 'Hide'));
+    else go();
+  };
+  App.actions.blkDel = function (el) { var id = el.dataset.id; App.confirm(T('Удалить блок?', 'Delete block?'), T('Удаляется только блок, данные плана остаются.', 'Only the block is removed; plan data stays.'), function () { App.commit(T('Блок удалён', 'Block deleted'), function (L) { C.removeBlock(L, id); }); }, true, T('Удалить', 'Delete')); };
+  App.modals.blockAdd = function (m) {
+    var L = S.L, f = m.f; if (!m.inited) { m.inited = true; f.type = 'goal'; f.title = ''; f.ref = ''; }
+    var x = fld(T('Шаблон', 'Template'), sel('type', App.opts(Object.keys(TPL()).map(function (k) { return [k, TPL()[k]]; }), f.type), { re: 1 }));
+    x += fld(T('Название', 'Title'), inp('title', f.title, { ph: TPL()[f.type] }));
+    if (f.type === 'goal') x += fld(T('Цель', 'Goal'), sel('ref', App.opts([['', '—']].concat((L.goals || []).map(function (g) { return [g.id, g.title]; })), f.ref)));
+    if (f.type === 'income2') x += fld(T('Доход из списка', 'Income from the list'), sel('ref', App.opts([['', '—']].concat((L.series || []).filter(isIncome).map(function (s) { return [s.id, s.title]; })), f.ref)));
+    if (f.type === 'debt') x += fld(T('Долг', 'Debt'), sel('ref', App.accOpts(C.isLiab, f.ref, '—')));
+    var extra = '';
+    if (f.type === 'custom') extra = App.group(T('Показывать серии', 'Show series'), (L.series || []).map(function (s) { return fld(esc(s.title) + ' <span class="tiny muted">' + kindName(s.kind) + '</span>', App.chk('s_' + s.id, f['s_' + s.id])); }).join('') || '<div class="tiny muted" style="padding:10px">' + T('Список пуст', 'List is empty') + '</div>');
+    var note = f.type === 'income2' ? T('Второй доход — это строка в «Доходы и расходы». Блок только показывает её; если её ещё нет, добавь через «+».', 'A second income is a line in Income & expenses. The block only displays it; add it via “+” first if needed.') : T('Блок не хранит своих цифр — только показывает данные из плана.', 'A block stores no numbers of its own — it shows plan data.');
+    return { title: T('Добавить блок', 'Add block'), html: '<div class="form">' + group('', x, note) + extra + '</div>' + errBox(m), done: 'blockSave', doneLabel: T('Добавить', 'Add') };
+  };
+  App.actions.blockSave = function () {
+    var m = S.modal, f = m.f, refs = Object.keys(f).filter(function (k) { return k.indexOf('s_') === 0 && f[k]; }).map(function (k) { return k.slice(2); });
+    if (f.type !== 'custom' && !f.ref) { m.err = T('Выберите источник', 'Pick a source'); App.renderModal(); return; }
+    if (f.type === 'custom' && !f.title) { m.err = T('Введите название', 'Enter a title'); App.renderModal(); return; }
+    App.closeModal();
+    App.commit(T('Блок добавлен', 'Block added'), function (L) { C.addBlock(L, { type: f.type, title: f.title, ref: f.ref || null, refs: refs }); });
+  };
 })();
 
 </script>
